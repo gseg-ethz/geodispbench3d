@@ -1,0 +1,39 @@
+cff-version: 1.2.0
+message: "If you use this software, please cite it using the metadata from this file."
+title: "geodispbench3d: A benchmark framework for 3D displacement / optical-flow tools"
+type: software
+authors:
+  - given-names: Nicholas
+    family-names: Meyer
+    email: meyernic@ethz.ch
+    affiliation: "ETH Zurich, Department of Civil, Environmental and Geomatic Engineering (D-BAUG), Institute of Geodesy and Photogrammetry, Geosensors and Engineering Geodesy"
+license: BSD-3-Clause
+url: "https://gseg.igp.ethz.ch/"
+repository-code: "https://github.com/gseg-ethz/geodispbench3d"
+abstract: >-
+  geodispbench3d is a Python benchmark framework for 3D displacement and
+  optical-flow tools. It composes a tool, dataset, and metric definition
+  into a Bayesian hyperparameter sweep (via Ax), with built-in adapters
+  for CLI binaries and importable Python callables. Pre-built adapters
+  ship for the iof3D and F2S3 tools.
+keywords:
+  - benchmark
+  - point-cloud
+  - optical-flow
+  - displacement
+  - bayesian-optimization
+  - ax
+  - hydra
+preferred-citation:
+  type: software
+  title: "geodispbench3d: A benchmark framework for 3D displacement / optical-flow tools"
+  authors:
+    - given-names: Nicholas
+      family-names: Meyer
+      email: meyernic@ethz.ch
+      affiliation: "ETH Zurich, Department of Civil, Environmental and Geomatic Engineering (D-BAUG), Institute of Geodesy and Photogrammetry, Geosensors and Engineering Geodesy"
+  doi: "10.XXXX/eth-data-archive.TBD"
+  identifiers:
+    - description: "Zenodo concept DOI covering all versions."
+      type: doi
+      value: "10.5281/zenodo.TBD-CONCEPT"
