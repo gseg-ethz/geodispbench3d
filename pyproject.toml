@@ -7,15 +7,20 @@ name = "geodispbench3d"
 description = "Benchmark framework for 3D displacement / optical-flow tools, with Bayesian hyperparameter sweeps and pluggable adapters."
 requires-python = "~=3.11"
 keywords = ["benchmark", "point-cloud", "optical-flow", "displacement", "ax", "hydra"]
-license = { text = "Proprietary" }
+license = { text = "BSD-3-Clause" }
 authors = [
-    { name = "Nicholas Meyer" },
-    { email = "meyernic@ethz.ch" },
+    { name = "Nicholas Meyer", email = "meyernic@ethz.ch" },
 ]
 dynamic = ["version", "readme"]
 classifiers = [
     "Programming Language :: Python :: 3",
-    "Private :: Do Not Upload",  # remove before publishing
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "License :: OSI Approved :: BSD License",
+    "Operating System :: OS Independent",
+    # Remove this classifier before publishing to PyPI; PyPI rejects
+    # any package whose classifiers begin with `Private ::`.
+    "Private :: Do Not Upload",
 ]
 dependencies = [
     "numpy ~= 2.0",
