@@ -1,0 +1,32 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://geodispbench3d/schema/metrics.json",
+  "title": "geodispbench3d metrics config",
+  "type": "object",
+  "properties": {
+    "objective_metrics": {
+      "type": "array",
+      "items": {"$ref": "#/$defs/metric"}
+    },
+    "record_metrics": {
+      "type": "array",
+      "items": {"$ref": "#/$defs/metric"}
+    }
+  },
+  "$defs": {
+    "metric": {
+      "type": "object",
+      "required": ["id", "fn"],
+      "properties": {
+        "id": {"type": "string"},
+        "fn": {"type": "string", "pattern": "^[a-zA-Z_][a-zA-Z0-9_.]*:[a-zA-Z_][a-zA-Z0-9_]*$"},
+        "needs": {
+          "type": "array",
+          "items": {"enum": ["prediction", "ground_truth", "trial_meta", "case_meta"]}
+        },
+        "gt_kinds": {"type": "array", "items": {"type": "string"}},
+        "params": {"type": "object"}
+      }
+    }
+  }
+}

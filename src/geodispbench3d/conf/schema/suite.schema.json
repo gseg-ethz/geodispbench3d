@@ -1,0 +1,36 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://geodispbench3d/schema/suite.json",
+  "title": "geodispbench3d suite config",
+  "type": "object",
+  "required": ["id", "tool", "dataset", "metrics"],
+  "properties": {
+    "id": {"type": "string"},
+    "tool": {"type": "string"},
+    "dataset": {"type": "string"},
+    "metrics": {"type": "string"},
+    "search": {
+      "type": "object",
+      "properties": {
+        "max_trials": {"type": "integer", "minimum": 1},
+        "sobol_trials": {"type": "integer", "minimum": 1},
+        "objective": {"type": "string"},
+        "minimize": {"type": "boolean"}
+      }
+    },
+    "execution": {
+      "type": "object",
+      "properties": {
+        "parallel_trials": {"type": "integer", "minimum": 1},
+        "override_tool_mode": {"enum": ["subprocess", "in_process", null]}
+      }
+    },
+    "results": {
+      "type": "object",
+      "properties": {
+        "parquet_path": {"type": "string"},
+        "run_dir_root": {"type": "string"}
+      }
+    }
+  }
+}
