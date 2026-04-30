@@ -1,0 +1,23 @@
+# Default iof3D sweep suite on the Mattertal dataset.
+#
+# Reproduces the previous behavior of `iof3d-ax` with conf/hparam/ax.yaml,
+# but composes the same shared dataset + metrics that the F2S3 suite uses,
+# so cross-tool comparison on identical GT is one diff away.
+
+id: iof3d-mattertal
+tool: ../../src/geodispbench3d_iof3d/conf/tool/iof3d.yaml
+dataset: ../datasets/mattertal.yaml
+metrics: ../metrics/pointing_error.yaml
+
+search:
+  max_trials: 10
+  sobol_trials: 3
+  objective: runtime_seconds
+  minimize: true
+
+execution:
+  parallel_trials: 1
+  override_tool_mode: null
+
+results:
+  parquet_path: outputs/iof3d_mattertal.parquet

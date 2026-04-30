@@ -1,0 +1,28 @@
+id: mattertal
+# Shared dataset description for the Mattertal site. Used by every tool that
+# benchmarks against this GT — iof3D, F2S3, etc. — so all tools see the same
+# 13 ground-truth point displacements.
+#
+# scans/ deliberately empty for cases where the tool discovers PCDs from its
+# own configuration (e.g. iof3D's AppConfig.pcd_directory). Tools that take
+# explicit PLY paths should override this dataset YAML or extend it with
+# scans: entries per case. The F2S3 dataset YAML shows that variant.
+root: ../data
+metadata:
+  description: |
+    Manually annotated 3D displacement points on the Mattertal rock-fall site,
+    epoch 1 (2019) → epoch 2 (2021). Coordinates are in canonical
+    (post-rotation) frame; the historical in-code GTPointArray applied a
+    (-x, -y, z) rotation for the first 6 entries — that has been baked into
+    the CSV.
+gt_kinds_supported:
+  - point_displacements
+cases:
+  - name: mattertal-all
+    scans: []
+    ground_truth:
+      kind: point_displacements
+      path: mattertal_gt.csv
+    metadata:
+      site: mattertal
+      epochs: ["e1", "e2"]
