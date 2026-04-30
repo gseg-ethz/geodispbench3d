@@ -1,0 +1,27 @@
+# F2S3 voxel-grid + refine sweep on the Mattertal site.
+#
+# Sweeps voxel_grid_size in 0.0..2.0 (step 0.2) and the boolean refine_results,
+# minimizing median 3D displacement error against the 13 manually-annotated
+# GT points.
+#
+# Per-trial outputs land under
+#   /scratch/00_data/geodispbench3d/f2s3/<param-hash>/output[/refined_results]/*.txt
+# (the hashed_run_dir spec lives in the tool YAML).
+
+id: f2s3-voxel-refine
+tool: ../../src/geodispbench3d_f2s3/conf/tool/f2s3.yaml
+dataset: ../datasets/mattertal_f2s3.yaml
+metrics: ../metrics/pointing_error.yaml
+
+search:
+  max_trials: 22         # 11 voxel * 2 refine = 22 unique combinations
+  sobol_trials: 8
+  objective: median_displacement_error
+  minimize: true
+
+execution:
+  parallel_trials: 1
+  override_tool_mode: null
+
+results:
+  parquet_path: outputs/f2s3_voxel_refine.parquet

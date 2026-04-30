@@ -1,0 +1,45 @@
+# Pointing-error metrics for 3D displacement tools evaluated against
+# point-displacement ground truth.
+#
+# Reusable across iof3D, F2S3, and any other tool whose prediction is shaped
+# {per_point: [{label, vector}, ...]} -- i.e. a displacement vector at each
+# labeled GT location.
+#
+# objective_metrics: scalars eligible to be the Ax objective (suite picks one).
+# record_metrics:    rich rows for parquet / dashboard analysis.
+
+objective_metrics:
+  - id: median_displacement_error
+    fn: geodispbench3d.metrics.builtins:median_displacement_error
+    needs: [prediction, ground_truth]
+    gt_kinds: [point_displacements]
+
+  - id: median_angle_error_deg
+    fn: geodispbench3d.metrics.builtins:median_angle_error_deg
+    needs: [prediction, ground_truth]
+    gt_kinds: [point_displacements]
+
+  - id: median_relative_vector_error
+    fn: geodispbench3d.metrics.builtins:median_relative_vector_error
+    needs: [prediction, ground_truth]
+    gt_kinds: [point_displacements]
+
+  - id: mean_relative_magnitude_error
+    fn: geodispbench3d.metrics.builtins:mean_relative_magnitude_error
+    needs: [prediction, ground_truth]
+    gt_kinds: [point_displacements]
+
+  - id: gt_coverage
+    fn: geodispbench3d.metrics.builtins:gt_coverage
+    needs: [prediction, ground_truth]
+    gt_kinds: [point_displacements]
+
+  - id: runtime_seconds
+    fn: geodispbench3d.metrics.builtins:wallclock_runtime
+    needs: [trial_meta]
+
+record_metrics:
+  - id: per_point_displacement
+    fn: geodispbench3d.metrics.builtins:per_point_displacement_record
+    needs: [prediction, ground_truth, case_meta, trial_meta]
+    gt_kinds: [point_displacements]

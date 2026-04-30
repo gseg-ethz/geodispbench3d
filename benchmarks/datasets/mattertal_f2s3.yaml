@@ -1,0 +1,28 @@
+id: mattertal-f2s3
+# Mattertal dataset variant that includes explicit scan paths.
+#
+# F2S3 is invoked as `f2s3 -s <epoch1.ply> -t <epoch2.ply> ...`, so the dataset
+# YAML carries the PLY locations directly. Other tools that take explicit
+# scan paths can use this variant or model their own.
+#
+# The GT itself is identical to datasets/mattertal.yaml — same CSV is reused.
+root: ../data
+metadata:
+  description: |
+    Mattertal site PRCS scans (Polar Reference Coordinate System) plus the
+    shared point-displacement GT. F2S3 consumes the two PLYs directly.
+gt_kinds_supported:
+  - point_displacements
+cases:
+  - name: mattertal-2019-2021
+    scans:
+      - epoch: e1
+        path: /scratch/00_data/IOF3D_testing/00_scans/ply/20190710_Epoch_1_PRCS.ply
+      - epoch: e2
+        path: /scratch/00_data/IOF3D_testing/00_scans/ply/20210720_Epoch_2_PRCS.ply
+    ground_truth:
+      kind: point_displacements
+      path: mattertal_gt.csv
+    metadata:
+      site: mattertal
+      epochs: ["2019-07-10", "2021-07-20"]
