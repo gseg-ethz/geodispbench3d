@@ -11,17 +11,16 @@ small set of well-known options (``base_app_config:`` path, optional
 from __future__ import annotations
 
 import logging
+from collections.abc import Mapping, Sequence
 from pathlib import Path
-from typing import Any, Mapping, Sequence
-
-from omegaconf import DictConfig, OmegaConf
+from typing import Any
 
 from iof3D.v2.cli_hydra import _build_app_config
+from omegaconf import DictConfig, OmegaConf
 
 from geodispbench3d.sweep.parameters import SweepParameter
 
 from .adapter import Iof3dCallableAdapter
-
 
 _DEFAULT_BASE_APP_CONFIG = "pkg://iof3D.conf/app/base.yaml"
 
@@ -90,9 +89,7 @@ def build_iof3d_adapter(
 # ---------------------------------------------------------------------------
 
 
-def _load_base_app_dictconfig(
-    ref: str | None, yaml_path: Path | None
-) -> DictConfig:
+def _load_base_app_dictconfig(ref: str | None, yaml_path: Path | None) -> DictConfig:
     """Load the iof3D ``app:`` section from a YAML reference."""
 
     if ref is None:
@@ -108,7 +105,7 @@ def _load_base_app_dictconfig(
 def _resolve_yaml_path(ref: str, yaml_path: Path | None) -> str:
     if ref.startswith("pkg://"):
         # pkg://iof3D.conf/app/base.yaml -> resolve via importlib.resources
-        module_path, _, sub = ref[len("pkg://"):].partition("/")
+        module_path, _, sub = ref[len("pkg://") :].partition("/")
         from importlib import resources
 
         try:

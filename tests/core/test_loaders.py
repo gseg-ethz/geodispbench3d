@@ -24,7 +24,8 @@ def synthetic_bench(tmp_path: Path) -> dict[str, Path]:
         writer.writerow(["B", 10.0, 0.0, 0.0, 10.05, 0.0, 0.05])
 
     dataset = tmp_path / "dataset.yaml"
-    dataset.write_text(textwrap.dedent("""
+    dataset.write_text(
+        textwrap.dedent("""
         id: synthetic
         cases:
           - name: only-case
@@ -32,10 +33,13 @@ def synthetic_bench(tmp_path: Path) -> dict[str, Path]:
             ground_truth:
               kind: point_displacements
               path: gt.csv
-    """).strip() + "\n")
+    """).strip()
+        + "\n"
+    )
 
     metrics = tmp_path / "metrics.yaml"
-    metrics.write_text(textwrap.dedent("""
+    metrics.write_text(
+        textwrap.dedent("""
         objective_metrics:
           - id: median_displacement_error
             fn: geodispbench3d.metrics.builtins:median_displacement_error
@@ -46,10 +50,13 @@ def synthetic_bench(tmp_path: Path) -> dict[str, Path]:
             needs: [prediction, ground_truth]
             gt_kinds: [point_displacements]
         record_metrics: []
-    """).strip() + "\n")
+    """).strip()
+        + "\n"
+    )
 
     tool = tmp_path / "tool.yaml"
-    tool.write_text(textwrap.dedent("""
+    tool.write_text(
+        textwrap.dedent("""
         id: stub
         kind: cli
         entry: /bin/true
@@ -58,10 +65,13 @@ def synthetic_bench(tmp_path: Path) -> dict[str, Path]:
         hyperparameters:
           - { name: alpha, type: choice, value_type: float, values: [0.0, 0.5, 1.0] }
           - { name: beta,  type: range,  value_type: int,   lower: 1, upper: 4 }
-    """).strip() + "\n")
+    """).strip()
+        + "\n"
+    )
 
     suite = tmp_path / "suite.yaml"
-    suite.write_text(textwrap.dedent("""
+    suite.write_text(
+        textwrap.dedent("""
         id: synthetic
         tool: tool.yaml
         dataset: dataset.yaml
@@ -71,7 +81,9 @@ def synthetic_bench(tmp_path: Path) -> dict[str, Path]:
           sobol_trials: 1
           objective: median_displacement_error
           minimize: true
-    """).strip() + "\n")
+    """).strip()
+        + "\n"
+    )
 
     return {"gt_csv": gt_csv, "dataset": dataset, "metrics": metrics, "tool": tool, "suite": suite}
 

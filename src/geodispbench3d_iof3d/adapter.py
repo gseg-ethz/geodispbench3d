@@ -10,12 +10,21 @@ from __future__ import annotations
 
 import logging
 import time
+from collections.abc import Mapping, Sequence
 from collections.abc import Mapping as MappingABC
 from dataclasses import replace
 from pathlib import Path
-from typing import Any, Mapping, Sequence
+from typing import Any
 
+from iof3D.v2.api.pipeline_runner import (
+    FlowPipelineError,
+    FlowPipelineResult,
+    run_flow_pipeline,
+)
+from iof3D.v2.config.settings import AppConfig, FlowSettings, sanitize_interp_params
 from omegaconf import OmegaConf
+from pc2img.core import ImgRes
+from pchandler.geometry.spherical import Angle
 
 from geodispbench3d.sweep.parameters import SweepParameter, is_active
 from geodispbench3d.sweep.trial_record import (
@@ -24,15 +33,6 @@ from geodispbench3d.sweep.trial_record import (
     store_trial_metadata,
 )
 from geodispbench3d.tool.base import ToolAdapter, TrialOutputs, TrialRequest, TrialResult
-
-from iof3D.v2.api.pipeline_runner import (
-    FlowPipelineError,
-    FlowPipelineResult,
-    run_flow_pipeline,
-)
-from iof3D.v2.config.settings import AppConfig, FlowSettings, sanitize_interp_params
-from pc2img.core import ImgRes
-from pchandler.geometry.spherical import Angle
 
 
 class Iof3dCallableAdapter(ToolAdapter):
@@ -80,9 +80,7 @@ class Iof3dCallableAdapter(ToolAdapter):
         except FlowPipelineError as exc:
             duration = time.perf_counter() - start
             failure_dir = run_dir_holder.get("path") or exc.run_dir
-            store_trial_failure(
-                failure_dir, request.parameters, duration, exc.cause
-            )
+            store_trial_failure(failure_dir, request.parameters, duration, exc.cause)
             return TrialResult(
                 outputs=TrialOutputs(run_dir=Path(failure_dir)),
                 scalar_metrics={"runtime_seconds": duration},
@@ -163,9 +161,7 @@ def build_app_config_from_parameters(
         try:
             img_width, img_height = _coerce_image_resolution(resolution_override)
         except ValueError as exc:
-            raise ValueError(
-                f"Invalid image resolution override: {resolution_override!r}"
-            ) from exc
+            raise ValueError(f"Invalid image resolution override: {resolution_override!r}") from exc
     else:
         img_width = int(_resolve("image.img_res.width", width_default))
         img_height = int(_resolve("image.img_res.height", height_default))
@@ -175,9 +171,7 @@ def build_app_config_from_parameters(
     else:
         angular_res = Angle.parse(str(angular_override))
     raw_interp_key = _resolve("image.interp_key", base.image.interp_key)
-    interp_key = (
-        str(raw_interp_key) if raw_interp_key is not None else base.image.interp_key
-    )
+    interp_key = str(raw_interp_key) if raw_interp_key is not None else base.image.interp_key
     interp_params = sanitize_interp_params(base.image.interp_params, interp_key)
     image_cfg = replace(
         base.image,
@@ -254,9 +248,7 @@ def build_app_config_from_parameters(
         ptl_memory_min_scale_factor=_resolve(
             "flow.ptl_memory_min_scale_factor", base.flow.ptl_memory_min_scale_factor
         ),
-        ptl_memory_min_size=_resolve(
-            "flow.ptl_memory_min_size", base.flow.ptl_memory_min_size
-        ),
+        ptl_memory_min_size=_resolve("flow.ptl_memory_min_size", base.flow.ptl_memory_min_size),
         ptl_memory_clear_cache=_resolve(
             "flow.ptl_memory_clear_cache", base.flow.ptl_memory_clear_cache
         ),
@@ -267,15 +259,11 @@ def build_app_config_from_parameters(
             ("flow.fft.patch_size", "flow.fft_patch_size"), base.flow.fft_patch_size
         ),
         fft_step=_resolve_alias(("flow.fft.step", "flow.fft_step"), base.flow.fft_step),
-        fft_device=_resolve_alias(
-            ("flow.fft.device", "flow.fft_device"), base.flow.fft_device
-        ),
+        fft_device=_resolve_alias(("flow.fft.device", "flow.fft_device"), base.flow.fft_device),
         fft_strategy=_resolve_alias(
             ("flow.fft.strategy", "flow.fft_strategy"), base.flow.fft_strategy
         ),
-        fft_weight=_resolve_alias(
-            ("flow.fft.weight", "flow.fft_weight"), base.flow.fft_weight
-        ),
+        fft_weight=_resolve_alias(("flow.fft.weight", "flow.fft_weight"), base.flow.fft_weight),
         fft_keep_confidence=bool(
             _resolve_alias(
                 ("flow.fft.keep_confidence", "flow.fft_keep_confidence"),
@@ -286,19 +274,13 @@ def build_app_config_from_parameters(
             ("flow.fft.upsample_factor", "flow.fft_upsample_factor"),
             base.flow.fft_upsample_factor,
         ),
-        fft_levels=_resolve_alias(
-            ("flow.fft.levels", "flow.fft_levels"), base.flow.fft_levels
-        ),
+        fft_levels=_resolve_alias(("flow.fft.levels", "flow.fft_levels"), base.flow.fft_levels),
         fft_scale_factor=_resolve_alias(
             ("flow.fft.scale_factor", "flow.fft_scale_factor"), base.flow.fft_scale_factor
         ),
-        fft_warp=bool(
-            _resolve_alias(("flow.fft.warp_right", "flow.fft_warp"), base.flow.fft_warp)
-        ),
+        fft_warp=bool(_resolve_alias(("flow.fft.warp_right", "flow.fft_warp"), base.flow.fft_warp)),
         fft_n_jobs=_resolve("flow.fft_n_jobs", base.flow.fft_n_jobs),
-        geocosi_patch_size=_resolve(
-            "flow.geocosi_patch_size", base.flow.geocosi_patch_size
-        ),
+        geocosi_patch_size=_resolve("flow.geocosi_patch_size", base.flow.geocosi_patch_size),
         geocosi_levels=_resolve("flow.geocosi_levels", base.flow.geocosi_levels),
         geocosi_step=_resolve("flow.geocosi_step", base.flow.geocosi_step),
         geocosi_border_refine_enabled=bool(
@@ -335,9 +317,7 @@ def build_app_config_from_parameters(
             "flow.convert_features_to_image",
             base.flow.convert_features_to_image,
         ),
-        color_max_quantile=_resolve(
-            "flow.color_max_quantile", base.flow.color_max_quantile
-        ),
+        color_max_quantile=_resolve("flow.color_max_quantile", base.flow.color_max_quantile),
         mapping_mode=_resolve("flow.mapping_mode", base.flow.mapping_mode),
         opencv_detector=opencv_detector,
         opencv_matcher=opencv_matcher,
@@ -421,9 +401,7 @@ class _BaseConfigLookup:
         return current
 
 
-def _outputs_from_result(
-    result: FlowPipelineResult, run_dir_override: Path | None
-) -> TrialOutputs:
+def _outputs_from_result(result: FlowPipelineResult, run_dir_override: Path | None) -> TrialOutputs:
     run_dir = Path(run_dir_override or result.run_dir)
     return TrialOutputs(
         run_dir=run_dir,
@@ -485,9 +463,7 @@ def _build_hydra_app_config(app_cfg: AppConfig) -> dict[str, Any]:
     if app_cfg.image.proj_params:
         image_cfg["proj_params"] = _serialize_value_for_config(app_cfg.image.proj_params)
     if app_cfg.image.interp_params:
-        image_cfg["interp_params"] = _serialize_value_for_config(
-            app_cfg.image.interp_params
-        )
+        image_cfg["interp_params"] = _serialize_value_for_config(app_cfg.image.interp_params)
 
     tiling_cfg = {
         "remove_empty": bool(app_cfg.tiling.remove_empty),
@@ -591,9 +567,7 @@ def _coerce_image_resolution(value: Any) -> tuple[int, int]:
         separator = "x" if "x" in token else ","
         parts = token.split(separator)
         if len(parts) != 2:
-            raise ValueError(
-                f"Expected '<width>x<height>' or '<width>,<height>', got {value!r}"
-            )
+            raise ValueError(f"Expected '<width>x<height>' or '<width>,<height>', got {value!r}")
         return int(parts[0]), int(parts[1])
     if isinstance(value, Sequence) and not isinstance(value, (bytes, bytearray)):
         seq = list(value)

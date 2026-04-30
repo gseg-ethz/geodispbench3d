@@ -6,9 +6,10 @@ existing hyperparameter YAML continues to work verbatim.
 
 from __future__ import annotations
 
+from collections.abc import Mapping, Sequence
 from collections.abc import Mapping as MappingABC
 from dataclasses import dataclass
-from typing import Any, Mapping, Sequence
+from typing import Any
 
 from omegaconf import DictConfig, OmegaConf
 

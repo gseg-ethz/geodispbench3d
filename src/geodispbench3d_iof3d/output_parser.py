@@ -16,11 +16,11 @@ shared pointing-error metrics.
 from __future__ import annotations
 
 import logging
+from collections.abc import Mapping
 from pathlib import Path
-from typing import Any, Mapping
+from typing import Any
 
 import numpy as np
-
 from pchandler import PointCloudData, load_file
 from pchandler.filters import SphereFilter
 
@@ -29,7 +29,6 @@ from geodispbench3d.dataset.ground_truth import (
     PointDisplacements,
 )
 from geodispbench3d.tool.base import TrialOutputs
-
 
 DEFAULT_SAMPLE_RADIUS_M = 15.0
 DEFAULT_AGGREGATION = "median"
@@ -70,8 +69,7 @@ def parse_iof3d_output(
         return _empty_prediction(ground_truth)
 
     per_point = [
-        _sample_at_label(merged, gt, radius=radius, aggregation=aggregation)
-        for gt in ground_truth
+        _sample_at_label(merged, gt, radius=radius, aggregation=aggregation) for gt in ground_truth
     ]
 
     return {
@@ -107,9 +105,7 @@ def _collect_leaf_paths(outputs: TrialOutputs) -> list[Path]:
     return []
 
 
-def _load_and_merge_leaves(
-    leaf_paths: list[Path], logger: logging.Logger
-) -> PointCloudData | None:
+def _load_and_merge_leaves(leaf_paths: list[Path], logger: logging.Logger) -> PointCloudData | None:
     pcds: list[PointCloudData] = []
     for path in leaf_paths:
         try:

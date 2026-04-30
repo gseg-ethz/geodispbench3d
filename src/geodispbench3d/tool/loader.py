@@ -15,9 +15,10 @@ output is already in that shape can omit it.
 from __future__ import annotations
 
 import importlib
+from collections.abc import Callable, Mapping, Sequence
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Any, Callable, Mapping, Sequence
+from typing import Any
 
 from omegaconf import OmegaConf
 
@@ -172,8 +173,7 @@ def _build_factory_adapter(raw: Mapping[str, Any], yaml_path: Path) -> ToolAdapt
     entry = str(raw.get("entry", ""))
     if not entry or ":" not in entry:
         raise ValueError(
-            "factory tool.yaml 'entry' must be 'package.module:function' "
-            "returning a ToolAdapter"
+            "factory tool.yaml 'entry' must be 'package.module:function' returning a ToolAdapter"
         )
     factory = _resolve_callable(entry)
     if not callable(factory):

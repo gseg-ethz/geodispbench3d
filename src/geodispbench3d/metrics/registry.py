@@ -15,9 +15,10 @@ constrain itself to specific GT kinds via ``gt_kinds``.
 from __future__ import annotations
 
 import importlib
+from collections.abc import Callable, Mapping, Sequence
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Any, Callable, Mapping, Sequence
+from typing import Any
 
 from omegaconf import OmegaConf
 
@@ -63,9 +64,7 @@ def resolve_metric_fn(entry: str) -> Callable[..., Any]:
     """Resolve a ``"package.module:function"`` string to a callable."""
 
     if ":" not in entry:
-        raise ValueError(
-            f"Metric fn reference must be 'package.module:function', got {entry!r}"
-        )
+        raise ValueError(f"Metric fn reference must be 'package.module:function', got {entry!r}")
     module_path, attr = entry.split(":", 1)
     module = importlib.import_module(module_path)
     fn = getattr(module, attr, None)

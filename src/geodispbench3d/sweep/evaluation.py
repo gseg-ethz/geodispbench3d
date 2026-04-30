@@ -17,8 +17,9 @@ trial, between the adapter and the metric callables.
 from __future__ import annotations
 
 import logging
+from collections.abc import Callable, Mapping, Sequence
 from dataclasses import dataclass, field
-from typing import Any, Callable, Mapping, Sequence
+from typing import Any
 
 from geodispbench3d.dataset.ground_truth import load_ground_truth
 from geodispbench3d.dataset.schema import CaseSpec
@@ -63,9 +64,7 @@ def evaluate_trial(
 
     log = logger or logging.getLogger("geodispbench3d.sweep.evaluation")
 
-    ground_truth = (
-        load_ground_truth(case.ground_truth) if case.ground_truth is not None else None
-    )
+    ground_truth = load_ground_truth(case.ground_truth) if case.ground_truth is not None else None
 
     prediction: Any = None
     if output_parser is not None:

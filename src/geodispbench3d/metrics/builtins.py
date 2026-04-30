@@ -18,10 +18,10 @@ glue.
 
 from __future__ import annotations
 
-from typing import Any, Mapping, Sequence
+from collections.abc import Mapping, Sequence
+from typing import Any
 
 import numpy as np
-
 
 # ---------------------------------------------------------------------------
 # Scalar metrics
@@ -222,7 +222,11 @@ def per_point_displacement_record(
 
         pred_mag = float(np.linalg.norm(pred_vec))
         denom = gt_mag * pred_mag
-        cosine = float(np.clip(np.dot(pred_vec, gt_vec) / denom, -1.0, 1.0)) if denom > 0 else float("nan")
+        cosine = (
+            float(np.clip(np.dot(pred_vec, gt_vec) / denom, -1.0, 1.0))
+            if denom > 0
+            else float("nan")
+        )
         angle_deg = float(np.degrees(np.arccos(cosine))) if denom > 0 else float("nan")
         rme = abs(gt_mag - pred_mag) / gt_mag if gt_mag > 0 else float("nan")
         rve = float(np.linalg.norm(gt_vec - pred_vec)) / gt_mag if gt_mag > 0 else float("nan")

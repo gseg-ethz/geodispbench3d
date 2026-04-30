@@ -14,8 +14,8 @@ from __future__ import annotations
 
 import os
 import re
+from collections.abc import Iterable
 from pathlib import Path
-from typing import Iterable, List
 
 try:
     import streamlit as st
@@ -79,14 +79,13 @@ def _sanitize_alias(value: str) -> str:
 
 
 def _summarise(
-    df: pd.DataFrame, metric: str, group_by: List[str], aggregations: List[str]
+    df: pd.DataFrame, metric: str, group_by: list[str], aggregations: list[str]
 ) -> pd.DataFrame:
     if not group_by:
         group_by = ["dummy"]
         df = df.assign(dummy="all")
     ops = [
-        (_sanitize_alias(f"{agg.lower()}_{metric}"), _PANDAS_AGG_MAP[agg])
-        for agg in aggregations
+        (_sanitize_alias(f"{agg.lower()}_{metric}"), _PANDAS_AGG_MAP[agg]) for agg in aggregations
     ]
     return df.groupby(group_by)[metric].agg(ops).reset_index()
 
@@ -133,9 +132,7 @@ def main() -> None:
     metric = st.sidebar.selectbox("Metric", metrics, index=0)
 
     filter_columns = [
-        col
-        for col in df.columns
-        if df[col].dtype == object and df[col].nunique() <= 50
+        col for col in df.columns if df[col].dtype == object and df[col].nunique() <= 50
     ]
     filters: dict[str, Iterable[str]] = {}
     for col in filter_columns:

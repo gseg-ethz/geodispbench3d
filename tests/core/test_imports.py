@@ -26,11 +26,19 @@ def test_framework_imports_without_tool_extras() -> None:
 def test_framework_has_no_iof3d_or_pchandler_imports(tmp_path) -> None:
     """Static check: no module under ``geodispbench3d`` imports iof3D, pchandler, or pc2img."""
 
-    import geodispbench3d
     from pathlib import Path
 
+    import geodispbench3d
+
     pkg_root = Path(geodispbench3d.__file__).parent
-    forbidden = ("from iof3D", "import iof3D", "from pchandler", "import pchandler", "from pc2img", "import pc2img")
+    forbidden = (
+        "from iof3D",
+        "import iof3D",
+        "from pchandler",
+        "import pchandler",
+        "from pc2img",
+        "import pc2img",
+    )
     offenders: list[str] = []
     for path in pkg_root.rglob("*.py"):
         text = path.read_text(encoding="utf-8", errors="replace")

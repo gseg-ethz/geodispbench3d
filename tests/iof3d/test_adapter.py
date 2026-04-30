@@ -8,7 +8,6 @@ requiring a GPU or the full iof3D pipeline to run.
 
 from __future__ import annotations
 
-import tempfile
 from pathlib import Path
 
 import numpy as np
@@ -29,7 +28,7 @@ def test_factory_loads_iof3d_tool_yaml() -> None:
 
 
 def test_iof3d_parser_perfect_prediction(tmp_path: Path) -> None:
-    pchandler = pytest.importorskip("pchandler")
+    pytest.importorskip("pchandler")
     from pchandler import PointCloudData
     from pchandler.data_io import Ply
 

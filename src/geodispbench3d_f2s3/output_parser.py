@@ -20,11 +20,11 @@ by ``iof3D_analysis.results.metrics.process_gt_samples``).
 from __future__ import annotations
 
 import logging
+from collections.abc import Mapping
 from pathlib import Path
-from typing import Any, Mapping, Sequence
+from typing import Any
 
 import numpy as np
-
 from pchandler import PointCloudData
 from pchandler.data_io import Csv
 from pchandler.filters import SphereFilter
@@ -34,7 +34,6 @@ from geodispbench3d.dataset.ground_truth import (
     PointDisplacements,
 )
 from geodispbench3d.tool.base import TrialOutputs
-
 
 F2S3_COLUMNS = ["x", "y", "z", "x2", "y2", "z2", "magnitude"]
 DEFAULT_SAMPLE_RADIUS_M = 15.0

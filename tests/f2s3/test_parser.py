@@ -42,8 +42,7 @@ def test_f2s3_parser_perfect_prediction(tmp_path: Path) -> None:
         e2 = p.xyz_epoch2
         mag = p.movement_magnitude
         lines.append(
-            f"{e1[0]:.6e} {e1[1]:.6e} {e1[2]:.6e} "
-            f"{e2[0]:.6e} {e2[1]:.6e} {e2[2]:.6e} {mag:.6e}"
+            f"{e1[0]:.6e} {e1[1]:.6e} {e1[2]:.6e} {e2[0]:.6e} {e2[1]:.6e} {e2[2]:.6e} {mag:.6e}"
         )
     (output_dir / "tile_0.txt").write_text("\n".join(lines) + "\n")
 

@@ -9,21 +9,19 @@ through :class:`geodispbench3d.sweep.runner.AxSweepRunner`.
 from __future__ import annotations
 
 import logging
+from collections.abc import Mapping
 from pathlib import Path
-from typing import Mapping
 
 import hydra
 from hydra.core.hydra_config import HydraConfig
+from iof3D.v2.cli_hydra import _build_app_config, _to_path
 from omegaconf import DictConfig
 
 from geodispbench3d.sweep.parameters import (
-    SweepConfig,
     build_parameter_specs,
     load_sweep_config,
 )
 from geodispbench3d.sweep.runner import AxSweepRunner
-
-from iof3D.v2.cli_hydra import _build_app_config, _to_path
 
 from .adapter import Iof3dCallableAdapter
 
@@ -33,7 +31,9 @@ def _collect_run_kwargs(run_cfg: Mapping[str, object] | None) -> dict[str, objec
     if isinstance(cfg, Mapping):
         getter = cfg.get  # type: ignore[assignment]
     else:  # pragma: no cover - defensive
-        getter = lambda _k, default=None: default
+
+        def getter(_k, default=None):  # type: ignore[no-redef]
+            return default
 
     pcd_paths_cfg = getter("pcd_paths")
     pcd_paths: list[Path] | None = None

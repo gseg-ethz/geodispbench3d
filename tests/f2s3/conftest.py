@@ -12,4 +12,7 @@ from __future__ import annotations
 
 import pytest
 
-pytest.importorskip("pchandler", reason="install with: pip install 'geodispbench3d[iof3d]' (provides pchandler) or 'geodispbench3d[f2s3]' once F2S3 ships pchandler")
+pytest.importorskip(
+    "pchandler",
+    reason="install with: pip install 'geodispbench3d[iof3d]' (provides pchandler) or 'geodispbench3d[f2s3]' once F2S3 ships pchandler",
+)

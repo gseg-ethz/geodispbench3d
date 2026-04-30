@@ -14,9 +14,10 @@ from __future__ import annotations
 import importlib
 import logging
 import time
+from collections.abc import Callable, Mapping
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Any, Callable, Mapping
+from typing import Any
 
 from .base import ToolAdapter, TrialOutputs, TrialRequest, TrialResult
 

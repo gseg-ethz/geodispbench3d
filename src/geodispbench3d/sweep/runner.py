@@ -9,13 +9,14 @@ from __future__ import annotations
 
 import inspect
 import logging
+from collections.abc import Callable, Mapping, Sequence
 from collections.abc import Mapping as MappingABC
 from pathlib import Path
-from typing import Any, Callable, Mapping, Sequence
+from typing import Any
 
 try:  # Ax 1.1+
     from ax.service.ax_client import AxClient, ObjectiveProperties  # type: ignore
-except ImportError as exc:  # pragma: no cover - optional dep or older Ax
+except ImportError:  # pragma: no cover - optional dep or older Ax
     try:
         from ax.service.ax_client import AxClient  # type: ignore
 
@@ -76,9 +77,7 @@ class AxSweepRunner:
         sig = inspect.signature(self._ax.create_experiment)
         param_names = set(sig.parameters)
         specs = [dict(spec) for spec in parameter_specs]
-        self._logger.debug(
-            "AxClient.create_experiment parameters: %s", sorted(param_names)
-        )
+        self._logger.debug("AxClient.create_experiment parameters: %s", sorted(param_names))
 
         exp_kwargs: dict[str, Any] = {}
 
@@ -109,9 +108,7 @@ class AxSweepRunner:
                     self._objective_name: ObjectiveProperties(minimize=self._minimize)
                 }
             else:
-                exp_kwargs["objectives"] = {
-                    self._objective_name: {"minimize": self._minimize}
-                }
+                exp_kwargs["objectives"] = {self._objective_name: {"minimize": self._minimize}}
         elif "optimization_config" in param_names:
             if ObjectiveProperties is not None:
                 exp_kwargs["optimization_config"] = {
@@ -158,9 +155,7 @@ class AxSweepRunner:
                 trial_index, parameters = _normalize_trial_data(trial_data)
                 try:
                     metrics = executor(parameters)
-                    self._ax.complete_trial(
-                        trial_index=trial_index, raw_data=metrics
-                    )
+                    self._ax.complete_trial(trial_index=trial_index, raw_data=metrics)
                 except Exception as exc:  # pragma: no cover - defensive
                     self._logger.exception("Trial %s failed: %s", trial_index, exc)
                     self._ax.log_trial_failure(trial_index=trial_index)
@@ -216,9 +211,7 @@ class AxSweepRunner:
                         ax_trial_index,
                         on_record_rows,
                     )
-                    self._ax.complete_trial(
-                        trial_index=ax_trial_index, raw_data=aggregated
-                    )
+                    self._ax.complete_trial(trial_index=ax_trial_index, raw_data=aggregated)
                 except Exception as exc:  # pragma: no cover - defensive
                     self._logger.exception("Trial %s failed: %s", ax_trial_index, exc)
                     self._ax.log_trial_failure(trial_index=ax_trial_index)
@@ -263,6 +256,7 @@ class AxSweepRunner:
         keys = {k for d in per_case_scalars for k in d.keys()}
         out: dict[str, float] = {}
         import math
+
         for key in keys:
             values = [d[key] for d in per_case_scalars if key in d]
             finite = [v for v in values if isinstance(v, (int, float)) and not math.isnan(float(v))]
@@ -305,13 +299,13 @@ def _normalize_trial_data(trial_data: Any) -> tuple[int, dict[str, Any]]:
             continue
         if hasattr(item, "trial_index") and trial_index is None:
             try:
-                trial_index = int(getattr(item, "trial_index"))
+                trial_index = int(item.trial_index)
                 continue
             except Exception:  # pragma: no cover
                 pass
         if hasattr(item, "parameters") and params is None:
             try:
-                params = dict(getattr(item, "parameters"))
+                params = dict(item.parameters)
                 continue
             except Exception:  # pragma: no cover
                 pass
