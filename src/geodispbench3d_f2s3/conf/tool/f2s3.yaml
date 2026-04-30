@@ -1,0 +1,61 @@
+# F2S3 tool configuration.
+#
+# F2S3 produces a per-tile set of ASCII files under <results_dir>/output/
+# (or <results_dir>/output/refined_results/ when --refine_results is set).
+# The shared output_parser turns those tiles into a sampled-at-GT prediction.
+#
+# F2S3 lives in its own conda env (`f2s3-dev312`); the entry below uses
+# `conda run` so the binary is invoked from the right environment regardless
+# of which env geodispbench3d itself runs in.
+
+id: f2s3
+kind: cli
+entry: conda run -n f2s3-dev312 f2s3
+
+execution:
+  mode: subprocess
+  in_process_safe: false
+
+invocation:
+  style: argparse
+  # `--save_interim` is a presence-only flag (argparse store_true).
+  # `--refine_results` is sweepable (also presence-only).
+  presence_flag_params:
+    - save_interim
+    - refine_results
+  # Always-on flags applied to every trial.
+  static_params:
+    save_interim: true
+    source_cloud: /scratch/00_data/IOF3D_testing/00_scans/ply/20190710_Epoch_1_PRCS.ply
+    target_cloud: /scratch/00_data/IOF3D_testing/00_scans/ply/20210720_Epoch_2_PRCS.ply
+
+# Hyperparameter sweep:
+# * voxel_grid_size 0.0 .. 2.0 in 0.2 steps (11 values; 0.0 disables filtering)
+# * refine_results boolean
+hyperparameters:
+  - name: voxel_grid_size
+    type: choice
+    value_type: float
+    values: [0.0, 0.2, 0.4, 0.6, 0.8, 1.0, 1.2, 1.4, 1.6, 1.8, 2.0]
+    is_ordered: true
+    sort_values: true
+
+  - name: refine_results
+    type: choice
+    value_type: bool
+    values: [false, true]
+
+outputs:
+  from: glob
+  hashed_run_dir:
+    root: /scratch/00_data/geodispbench3d/f2s3
+    arg_name: --results_dir
+    hash_length: 12
+  predictions_glob: output/**/*.txt
+
+output_parser:
+  fn: geodispbench3d_f2s3:parse_f2s3_output
+  options:
+    sample_radius_m: 15.0
+    aggregation: median
+    prefer_refined: true
