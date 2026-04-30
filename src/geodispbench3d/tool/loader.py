@@ -1,0 +1,229 @@
+"""tool.yaml loader: constructs a :class:`ToolAdapter` from YAML.
+
+Supports the two built-in adapter kinds (``cli``, ``python_callable``) plus a
+``custom`` escape hatch that imports an adapter class by dotted path. The
+hyperparameters block is also parsed here so ``tool.yaml`` can be a
+self-contained description of a tool's search space.
+
+A tool.yaml may also reference an **output parser** — a callable that turns
+the tool's raw outputs (in the trial's run directory) into the
+``prediction = {per_point: [...]}`` shape consumed by metrics. The runner
+invokes the parser between the adapter and the metric registry; tools whose
+output is already in that shape can omit it.
+"""
+
+from __future__ import annotations
+
+import importlib
+from dataclasses import dataclass, field
+from pathlib import Path
+from typing import Any, Callable, Mapping, Sequence
+
+from omegaconf import OmegaConf
+
+from geodispbench3d.sweep.parameters import SweepParameter
+
+from .base import ToolAdapter
+from .callable_adapter import CallableSpec, CallableToolAdapter
+from .cli_adapter import (
+    CliInvocationSpec,
+    CliToolAdapter,
+    HashedRunDirSpec,
+)
+
+
+@dataclass(frozen=True)
+class ToolConfig:
+    """In-memory representation of a tool.yaml file."""
+
+    id: str
+    kind: str
+    adapter: ToolAdapter
+    hyperparameters: Sequence[SweepParameter] = ()
+    outputs_options: Mapping[str, Any] = field(default_factory=dict)
+    output_parser: Callable[..., Any] | None = None
+    output_parser_options: Mapping[str, Any] = field(default_factory=dict)
+    raw: Mapping[str, Any] = field(default_factory=dict)
+
+
+def load_tool_config(path: str | Path) -> ToolConfig:
+    """Load a tool.yaml and construct the adapter it describes."""
+
+    yaml_path = Path(path).resolve()
+    if not yaml_path.is_file():
+        raise FileNotFoundError(f"Tool YAML not found: {yaml_path}")
+
+    raw = OmegaConf.to_container(OmegaConf.load(str(yaml_path)), resolve=True)
+    if not isinstance(raw, dict):
+        raise ValueError(f"Tool YAML at {yaml_path} must be a mapping")
+
+    kind = str(raw.get("kind", "cli")).lower()
+    tool_id = str(raw.get("id", yaml_path.stem))
+
+    adapter = _build_adapter(kind, raw, yaml_path)
+    hparams = _load_hyperparameters(raw.get("hyperparameters") or [])
+
+    parser_raw = raw.get("output_parser") or {}
+    parser_fn: Callable[..., Any] | None = None
+    parser_options: Mapping[str, Any] = {}
+    if parser_raw:
+        parser_fn = _resolve_callable(str(parser_raw["fn"]))
+        parser_options = dict(parser_raw.get("options") or {})
+
+    return ToolConfig(
+        id=tool_id,
+        kind=kind,
+        adapter=adapter,
+        hyperparameters=tuple(hparams),
+        outputs_options=dict(raw.get("outputs") or {}),
+        output_parser=parser_fn,
+        output_parser_options=parser_options,
+        raw=raw,
+    )
+
+
+def _build_adapter(kind: str, raw: Mapping[str, Any], yaml_path: Path) -> ToolAdapter:
+    if kind == "cli":
+        return _build_cli_adapter(raw, yaml_path)
+    if kind in {"python_callable", "callable"}:
+        return _build_callable_adapter(raw)
+    if kind == "custom":
+        return _build_custom_adapter(raw)
+    if kind == "factory":
+        return _build_factory_adapter(raw, yaml_path)
+    raise ValueError(f"Unknown tool kind {kind!r} in {yaml_path}")
+
+
+def _build_cli_adapter(raw: Mapping[str, Any], yaml_path: Path) -> CliToolAdapter:
+    invocation_raw = raw.get("invocation") or {}
+    entry = str(raw.get("entry", invocation_raw.get("entry", "")))
+    if not entry:
+        raise ValueError(f"tool.yaml at {yaml_path} missing 'entry' for cli kind")
+
+    spec = CliInvocationSpec(
+        entry=entry,
+        style=str(invocation_raw.get("style", "hydra_overrides")),
+        extra_args=tuple(invocation_raw.get("extra_args") or ()),
+        presence_flag_params=tuple(invocation_raw.get("presence_flag_params") or ()),
+        static_params=dict(invocation_raw.get("static_params") or {}),
+    )
+
+    outputs_raw = raw.get("outputs") or {}
+    run_dir_root_raw = outputs_raw.get("run_dir_root")
+    run_dir_root = _resolve_path(run_dir_root_raw, yaml_path) if run_dir_root_raw else None
+
+    hashed_raw = outputs_raw.get("hashed_run_dir")
+    hashed_spec: HashedRunDirSpec | None = None
+    if hashed_raw:
+        root_raw = hashed_raw.get("root", run_dir_root_raw)
+        if not root_raw:
+            raise ValueError(
+                f"tool.yaml at {yaml_path}: hashed_run_dir requires 'root' "
+                "(or outputs.run_dir_root)"
+            )
+        hashed_spec = HashedRunDirSpec(
+            root=_resolve_path(root_raw, yaml_path),
+            arg_name=str(hashed_raw.get("arg_name", "--results_dir")),
+            hash_length=int(hashed_raw.get("hash_length", 12)),
+            extra_inputs=tuple(hashed_raw.get("extra_inputs") or ()),
+        )
+
+    return CliToolAdapter(
+        invocation=spec,
+        outputs_from=str(outputs_raw.get("from", "stdout_json")),
+        run_dir_root=run_dir_root,
+        hashed_run_dir=hashed_spec,
+        predictions_glob=outputs_raw.get("predictions_glob"),
+        figures_glob=outputs_raw.get("figures_glob"),
+        env=outputs_raw.get("env"),
+    )
+
+
+def _build_callable_adapter(raw: Mapping[str, Any]) -> CallableToolAdapter:
+    entry = str(raw.get("entry", ""))
+    if not entry:
+        raise ValueError("python_callable tool.yaml missing 'entry'")
+    return CallableToolAdapter(spec=CallableSpec(entry=entry))
+
+
+def _build_custom_adapter(raw: Mapping[str, Any]) -> ToolAdapter:
+    entry = str(raw.get("entry", ""))
+    if not entry or ":" not in entry:
+        raise ValueError("custom tool.yaml 'entry' must be 'package.module:ClassName'")
+    cls = _resolve_callable(entry)
+    if not isinstance(cls, type):
+        raise ImportError(f"Cannot resolve adapter class {entry!r}")
+    init_kwargs = raw.get("init_kwargs") or {}
+    instance = cls(**init_kwargs)
+    if not isinstance(instance, ToolAdapter):
+        raise TypeError(f"Custom adapter {entry!r} must be a ToolAdapter subclass instance")
+    return instance
+
+
+def _build_factory_adapter(raw: Mapping[str, Any], yaml_path: Path) -> ToolAdapter:
+    """Build an adapter via a user-supplied factory callable.
+
+    Use this when constructing the adapter requires more than dataclass-style
+    kwargs (e.g. the iof3D adapter must first parse a Hydra config tree to
+    produce its base AppConfig). The factory receives the tool YAML's
+    ``factory_options`` mapping plus ``yaml_path`` for path resolution.
+    """
+
+    entry = str(raw.get("entry", ""))
+    if not entry or ":" not in entry:
+        raise ValueError(
+            "factory tool.yaml 'entry' must be 'package.module:function' "
+            "returning a ToolAdapter"
+        )
+    factory = _resolve_callable(entry)
+    if not callable(factory):
+        raise TypeError(f"Factory {entry!r} is not callable")
+    options = dict(raw.get("factory_options") or {})
+    options.setdefault("yaml_path", yaml_path)
+    options.setdefault("hyperparameters", raw.get("hyperparameters") or [])
+    instance = factory(**options)
+    if not isinstance(instance, ToolAdapter):
+        raise TypeError(f"Factory {entry!r} must return a ToolAdapter instance")
+    return instance
+
+
+def _load_hyperparameters(raw: Sequence[Mapping[str, Any]]) -> list[SweepParameter]:
+    params: list[SweepParameter] = []
+    for entry in raw:
+        params.append(
+            SweepParameter(
+                name=str(entry["name"]),
+                kind=str(entry.get("type", "choice")),
+                value_type=str(entry.get("value_type", "str")),
+                values=list(entry.get("values")) if entry.get("values") is not None else None,
+                lower=entry.get("lower"),
+                upper=entry.get("upper"),
+                log_scale=bool(entry.get("log_scale", False)),
+                step=entry.get("step"),
+                activates_on=entry.get("activates_on"),
+                is_ordered=entry.get("is_ordered"),
+                sort_values=entry.get("sort_values"),
+            )
+        )
+    return params
+
+
+def _resolve_callable(entry: str) -> Any:
+    if ":" not in entry:
+        raise ValueError(f"Reference must be 'package.module:attr', got {entry!r}")
+    module_path, attr = entry.split(":", 1)
+    module = importlib.import_module(module_path)
+    target = getattr(module, attr, None)
+    if target is None:
+        raise ImportError(f"Cannot resolve {entry!r}")
+    return target
+
+
+def _resolve_path(value: Any, yaml_path: Path) -> Path:
+    p = Path(str(value))
+    if p.is_absolute():
+        return p
+    return (yaml_path.parent / p).resolve()
+
+
+__all__ = ["ToolConfig", "load_tool_config"]

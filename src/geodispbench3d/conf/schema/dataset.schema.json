@@ -1,0 +1,46 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://geodispbench3d/schema/dataset.json",
+  "title": "geodispbench3d dataset config",
+  "type": "object",
+  "required": ["id", "cases"],
+  "properties": {
+    "id": {"type": "string"},
+    "root": {"type": "string"},
+    "cases": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["name", "scans"],
+        "properties": {
+          "name": {"type": "string"},
+          "scans": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "required": ["epoch", "path"],
+              "properties": {
+                "epoch": {"type": "string"},
+                "path": {"type": "string"},
+                "metadata": {"type": "object"}
+              }
+            }
+          },
+          "ground_truth": {
+            "type": "object",
+            "required": ["kind"],
+            "properties": {
+              "kind": {"type": "string"},
+              "path": {"type": "string"},
+              "inline": {"type": "object"},
+              "options": {"type": "object"}
+            }
+          },
+          "metadata": {"type": "object"}
+        }
+      }
+    },
+    "gt_kinds_supported": {"type": "array", "items": {"type": "string"}},
+    "metadata": {"type": "object"}
+  }
+}
