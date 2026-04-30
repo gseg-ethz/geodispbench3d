@@ -1,0 +1,63 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+share/python-wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+MANIFEST
+
+# Versioning (setuptools_scm writes this dynamically)
+src/geodispbench3d/_version.py
+
+# Test / coverage
+.pytest_cache/
+.coverage
+.coverage.*
+htmlcov/
+.tox/
+.nox/
+coverage.xml
+*.cover
+.hypothesis/
+
+# Type checkers
+.mypy_cache/
+.pyright_cache/
+
+# Editor / IDE
+.vscode/
+.idea/
+*.swp
+*~
+
+# Environments
+.venv/
+venv/
+env/
+ENV/
+
+# Project outputs
+outputs/
+*.parquet
+.hydra_sweeps/
+runs/
+
+# OS
+.DS_Store
+Thumbs.db
