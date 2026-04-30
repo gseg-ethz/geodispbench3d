@@ -35,6 +35,12 @@ class ExecutionConfig:
 class ResultsConfig:
     parquet_path: Path | None = None
     run_dir_root: Path | None = None
+    # Cache for phase-2 output (parser predictions). Kept separate from
+    # run_dir_root so old run dirs can be cleaned up without losing the
+    # cheap-to-keep predictions; populated by the runner after each
+    # successful trial. Defaults to ``<suite-dir>/outputs/predictions/``
+    # if the suite YAML omits it.
+    predictions_root: Path | None = None
 
 
 @dataclass(frozen=True)
@@ -90,9 +96,13 @@ def load_suite(path: str | Path) -> SuiteConfig:
     )
 
     results_raw = raw.get("results") or {}
+    predictions_root = _resolve_optional_path(results_raw.get("predictions_root"), base)
+    if predictions_root is None:
+        predictions_root = (base / "outputs" / "predictions").resolve()
     results = ResultsConfig(
         parquet_path=_resolve_optional_path(results_raw.get("parquet_path"), base),
         run_dir_root=_resolve_optional_path(results_raw.get("run_dir_root"), base),
+        predictions_root=predictions_root,
     )
 
     return SuiteConfig(
