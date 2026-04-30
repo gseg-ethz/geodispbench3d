@@ -1,0 +1,37 @@
+name: release-please
+
+# Maintains a release PR against main that, when merged, cuts a new
+# version and tags it. Runs only on push to main; release-please is
+# meaningless on PRs or feature branches.
+#
+# Note on tokens: by default release-please uses GITHUB_TOKEN, whose
+# pushes don't trigger downstream workflows. CI on the release PR will
+# therefore not run unless a personal access token is provided as
+# RELEASE_PLEASE_TOKEN. Add that secret if you need CI to gate the
+# release PR; otherwise the GITHUB_TOKEN path is fine for cutting
+# releases of trusted commits.
+
+on:
+  push:
+    branches: [main]
+
+permissions:
+  contents: write
+  pull-requests: write
+  issues: write
+
+jobs:
+  release-please:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          fetch-tags: true
+
+      - uses: googleapis/release-please-action@v4
+        id: release
+        with:
+          token: ${{ secrets.RELEASE_PLEASE_TOKEN || secrets.GITHUB_TOKEN }}
+          config-file: release-please-config.json
+          manifest-file: .release-please-manifest.json
