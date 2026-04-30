@@ -22,10 +22,11 @@ import logging
 import shlex
 import subprocess
 import time
+from collections.abc import Mapping, Sequence
 from collections.abc import Mapping as MappingABC
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Any, Mapping, Sequence
+from typing import Any
 
 from .base import ToolAdapter, TrialOutputs, TrialRequest, TrialResult
 
@@ -167,8 +168,18 @@ class CliToolAdapter(ToolAdapter):
         argv: list[str] = shlex.split(self._invocation.entry)
         argv.extend(self._invocation.extra_args)
         if self._invocation.static_params:
-            argv.extend(_render_parameters(self._invocation.static_params, self._invocation.style, self._invocation.presence_flag_params))
-        argv.extend(_render_parameters(request.parameters, self._invocation.style, self._invocation.presence_flag_params))
+            argv.extend(
+                _render_parameters(
+                    self._invocation.static_params,
+                    self._invocation.style,
+                    self._invocation.presence_flag_params,
+                )
+            )
+        argv.extend(
+            _render_parameters(
+                request.parameters, self._invocation.style, self._invocation.presence_flag_params
+            )
+        )
         if self._hashed_run_dir is not None and run_dir is not None:
             argv.extend([self._hashed_run_dir.arg_name, str(run_dir)])
         return argv
@@ -267,9 +278,7 @@ def _outputs_from_payload(payload: Mapping[str, Any]) -> TrialOutputs:
         for k, v in payload.items()
         if k not in {"run_dir", "predictions", "figures", "scalar_metrics"}
     }
-    return TrialOutputs(
-        run_dir=run_dir, predictions=predictions, figures=figures, extras=extras
-    )
+    return TrialOutputs(run_dir=run_dir, predictions=predictions, figures=figures, extras=extras)
 
 
 def _metrics_from_payload(payload: Mapping[str, Any]) -> Mapping[str, float]:

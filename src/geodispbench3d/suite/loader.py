@@ -8,7 +8,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Any, Mapping
+from typing import Any
 
 from omegaconf import OmegaConf
 
@@ -68,9 +68,7 @@ def load_suite(path: str | Path) -> SuiteConfig:
     dataset_ref = raw.get("dataset")
     metrics_ref = raw.get("metrics")
     if not (tool_ref and dataset_ref and metrics_ref):
-        raise ValueError(
-            f"Suite {yaml_path} must reference 'tool', 'dataset', and 'metrics'"
-        )
+        raise ValueError(f"Suite {yaml_path} must reference 'tool', 'dataset', and 'metrics'")
 
     tool_cfg = load_tool_config((base / tool_ref).resolve())
     dataset_spec = load_dataset((base / dataset_ref).resolve())

@@ -2,19 +2,19 @@
 
 from __future__ import annotations
 
-from .schema import (
-    CaseSpec,
-    DatasetSpec,
-    ScanSpec,
-    GroundTruthSpec,
-    load_dataset,
-)
 from .ground_truth import (
     GT_LOADERS,
     PointDisplacement,
     PointDisplacements,
     load_ground_truth,
     register_gt_loader,
+)
+from .schema import (
+    CaseSpec,
+    DatasetSpec,
+    GroundTruthSpec,
+    ScanSpec,
+    load_dataset,
 )
 
 __all__ = [

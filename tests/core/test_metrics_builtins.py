@@ -37,8 +37,7 @@ def _gt() -> PointDisplacements:
 def _perfect_prediction(gt: PointDisplacements) -> dict:
     return {
         "per_point": [
-            {"label": p.label, "vector": list(p.movement_vector), "source_count": 1}
-            for p in gt
+            {"label": p.label, "vector": list(p.movement_vector), "source_count": 1} for p in gt
         ]
     }
 

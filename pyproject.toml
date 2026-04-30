@@ -58,12 +58,8 @@ iof3d = [
 # Listed for symmetry; the adapter itself works without it (subprocess invocation).
 f2s3 = []
 dev = [
-    "black ~= 25.1",
-    "isort ~= 6.0",
-    "flake8 ~= 7.3",
-    "flake8-bugbear",
-    "flake8-docstrings",
-    "mypy ~= 1.17",
+    "ruff ~= 0.8",
+    "pyright ~= 1.1",
     "pre-commit ~= 4.3",
     "pytest ~= 8.4",
     "coverage ~= 7.0",
@@ -93,6 +89,31 @@ include-package-data = true
 
 [tool.setuptools.dynamic]
 readme = { file = ["README.md"], content-type = "text/markdown" }
+
+[tool.ruff]
+line-length = 100
+target-version = "py311"
+extend-exclude = ["src/geodispbench3d/_version.py"]
+
+[tool.ruff.lint]
+# Reasonable starter set; expand once the codebase has been through one
+# clean pass. Errors / pyflakes / bugbear / isort / pyupgrade catches
+# 90% of what black + flake8 + flake8-bugbear used to enforce.
+select = ["E", "F", "B", "I", "UP", "W"]
+ignore = [
+    "E501",  # line length: enforced by formatter, not lint
+]
+
+[tool.ruff.lint.per-file-ignores]
+"tests/**" = ["B011"]  # allow `assert False` in tests
+"src/geodispbench3d/_version.py" = ["UP", "F"]
+# ToolAdapter deliberately ships no-op default hooks (prepare / teardown)
+# so subclasses opt in; B027 (empty methods in an ABC) doesn't apply.
+"src/geodispbench3d/tool/base.py" = ["B027"]
+
+[tool.ruff.format]
+quote-style = "double"
+indent-style = "space"
 
 [tool.setuptools_scm]
 write_to = "src/geodispbench3d/_version.py"
