@@ -1,0 +1,47 @@
+name: CI
+
+on:
+  push:
+    branches: [main, develop]
+  pull_request:
+    branches: [main, develop]
+
+jobs:
+  test:
+    name: ${{ matrix.job.name }}
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        job:
+          # The framework wheel alone, no tool extras. This is the "bench
+          # works without iof3D / pchandler / pc2img" guarantee.
+          - { name: core,  extra: ".[dev]"        }
+          # The iof3D adapter. Pulls in iof3D + its scientific Python stack.
+          # Currently disabled in CI until iof3D is available on PyPI; flip
+          # the `enabled:` flag below to true once it is.
+          - { name: iof3d, extra: ".[iof3d,dev]", enabled: "false" }
+          # The F2S3 adapter. Pure-Python; the F2S3 binary is not required
+          # by the parser-shape tests scaffolded here.
+          - { name: f2s3,  extra: ".[f2s3,dev]"  }
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install
+        if: ${{ matrix.job.enabled != 'false' }}
+        run: |
+          python -m pip install --upgrade pip
+          pip install -e "${{ matrix.job.extra }}"
+
+      - name: Run tests
+        if: ${{ matrix.job.enabled != 'false' }}
+        run: pytest tests/${{ matrix.job.name }} -v
+
+      - name: Skipped (waiting on PyPI publication of iof3D)
+        if: ${{ matrix.job.enabled == 'false' }}
+        run: echo "iof3D job will run once iof3D is published on a reachable index."
