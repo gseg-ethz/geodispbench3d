@@ -299,6 +299,35 @@ class AxSweepRunner:
                     exc_info=True,
                 )
 
+            # Cache phase-2 output so future --rescore / analyze passes
+            # can skip re-parsing. Failures here are non-fatal; the trial
+            # itself succeeded and Ax already has its scalar.
+            predictions_root = getattr(suite.results, "predictions_root", None)
+            if predictions_root is not None and evaluation.prediction is not None:
+                try:
+                    from geodispbench3d.results.predictions_cache import write_prediction
+
+                    write_prediction(
+                        Path(predictions_root),
+                        tool_id=tool_prov.id,
+                        dataset_id=dataset_prov.id,
+                        case=case.name,
+                        run_hash=result.outputs.run_dir.name,
+                        prediction=evaluation.prediction,
+                        provenance={
+                            "tool": tool_prov,
+                            "dataset": dataset_prov,
+                            "parser": parser_prov,
+                            "run_dir": str(result.outputs.run_dir),
+                        },
+                    )
+                except Exception:  # pragma: no cover - cache failure shouldn't fail a trial
+                    self._logger.debug(
+                        "Unable to cache prediction for run %s",
+                        result.outputs.run_dir,
+                        exc_info=True,
+                    )
+
             if on_record_rows and evaluation.record_rows:
                 on_record_rows(list(evaluation.record_rows))
 
