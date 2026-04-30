@@ -1,0 +1,69 @@
+# iof3D tool configuration.
+#
+# Uses kind: factory because constructing the iof3D adapter needs more than a
+# dataclass-style init: it must materialize an AppConfig from iof3D's own
+# Hydra base config tree first. The factory call keeps that wiring in the
+# iof3D-specific package; the generic loader stays oblivious.
+#
+# The adapter runs in-process for speed (Iof3dCallableAdapter declares
+# in_process_safe = True) — iof3D's pipeline reinitialises CUDA / serializers
+# cleanly per trial.
+
+id: iof3d-v2
+kind: factory
+entry: geodispbench3d_iof3d.factory:build_iof3d_adapter
+
+factory_options:
+  # Path to the iof3D Hydra app/base.yaml. The "pkg://" scheme resolves to a
+  # file inside the installed iof3D wheel, so this works without any explicit
+  # filesystem path.
+  base_app_config: pkg://iof3D.conf/app/base.yaml
+  objective_name: runtime_seconds
+  minimize: true
+  # Run-time pipeline kwargs applied to every trial (analogous to the legacy
+  # `run:` section in iof3D_analysis/conf/config_ax.yaml).
+  run_kwargs:
+    max_feature_workers: 16
+
+# Hyperparameter sweep — same grammar as iof3D_analysis/conf/hparam/ax.yaml.
+hyperparameters:
+  - name: flow.method
+    type: choice
+    value_type: str
+    values: [fft_local]
+
+  - name: flow.feature
+    type: choice
+    value_type: str
+    values:
+      - normalized_norm_(gradient_x_range,gradient_y_range)_5_95
+
+  - name: flow.fft.patch_size
+    type: choice
+    value_type: int
+    values: [15, 35, 75, 115, 145]
+    activates_on:
+      flow.method: [fft_local, fft_local_v2]
+
+  - name: flow.fft.step
+    type: choice
+    value_type: int
+    values: [1, 2, 4, 8]
+    activates_on:
+      flow.method: [fft_local_v2]
+
+  - name: flow.fft.device
+    type: choice
+    value_type: str
+    values: [auto, cpu, cuda]
+    activates_on:
+      flow.method: [fft_local_v2]
+
+# Output parser: turn the leaf PLYs into prediction = {per_point: [...]}
+# by sampling within sample_radius_m of each GT epoch-1 position. Symmetric
+# to the F2S3 parser; uses pchandler.load_file + SphereFilter.
+output_parser:
+  fn: geodispbench3d_iof3d:parse_iof3d_output
+  options:
+    sample_radius_m: 15.0
+    aggregation: median

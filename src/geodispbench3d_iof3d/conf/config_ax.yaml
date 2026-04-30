@@ -1,0 +1,14 @@
+defaults:
+  - app: base
+  - run: default
+  - hparam: ax
+  - _self_
+
+hydra:
+  searchpath:
+    - pkg://iof3D.conf
+    - pkg://iof3D_analysis.conf
+  run:
+    dir: ${oc.env:HYDRA_RUN_DIR,${run.hydra_run_dir}}
+  sweep:
+    dir: ${oc.env:HYDRA_SWEEP_DIR,.hydra_sweeps}
