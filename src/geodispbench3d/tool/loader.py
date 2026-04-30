@@ -45,6 +45,7 @@ class ToolConfig:
     output_parser: Callable[..., Any] | None = None
     output_parser_options: Mapping[str, Any] = field(default_factory=dict)
     raw: Mapping[str, Any] = field(default_factory=dict)
+    source_path: Path | None = None
 
 
 def load_tool_config(path: str | Path) -> ToolConfig:
@@ -80,6 +81,7 @@ def load_tool_config(path: str | Path) -> ToolConfig:
         output_parser=parser_fn,
         output_parser_options=parser_options,
         raw=raw,
+        source_path=yaml_path,
     )
 
 

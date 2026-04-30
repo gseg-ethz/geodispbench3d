@@ -229,11 +229,35 @@ class AxSweepRunner:
         ax_trial_index: int,
         on_record_rows: Callable[[Sequence[Mapping[str, Any]]], None] | None,
     ) -> Mapping[str, float]:
+        from geodispbench3d.sweep.trial_record import (
+            DatasetProvenance,
+            ParserProvenance,
+            ToolProvenance,
+        )
+
+        tool_yaml = getattr(suite.tool, "source_path", None) or getattr(
+            suite.tool.raw, "get", lambda *_: None
+        )("__source_path__")
+        tool_prov = ToolProvenance.from_yaml_path(suite.tool.id, tool_yaml)
+        parser_prov = ParserProvenance(
+            fn=_parser_fn_repr(suite.tool.output_parser),
+            options=dict(suite.tool.output_parser_options or {}),
+        )
+
         per_case_scalars: list[dict[str, float]] = []
         for case in cases:
             request = TrialRequest(parameters=parameters, case_name=case.name)
             result = self._adapter.run_trial(request)
             self._record_run_hash(result.outputs.run_dir.name)
+
+            dataset_prov = DatasetProvenance(id=suite.dataset.id, case=case.name)
+            record_extras = {
+                "tool_id": tool_prov.id,
+                "dataset_id": dataset_prov.id,
+                "case": case.name,
+                "trial_index": ax_trial_index,
+                "mode": "sweep",
+            }
 
             evaluation = evaluate_trial(
                 trial_result=result,
@@ -244,9 +268,37 @@ class AxSweepRunner:
                 output_parser=suite.tool.output_parser,
                 output_parser_options=suite.tool.output_parser_options,
                 trial_index=ax_trial_index,
+                record_extras=record_extras,
                 logger=self._logger,
             )
             per_case_scalars.append(dict(evaluation.scalar_metrics))
+
+            # Stamp provenance into the run's summary.json so downstream
+            # --rescore / analyze invocations can find tool, dataset, and
+            # parser context without consulting the original suite YAML.
+            try:
+                from dataclasses import asdict
+
+                from geodispbench3d.sweep.trial_record import update_trial_record
+
+                update_trial_record(
+                    result.outputs.run_dir,
+                    {
+                        "tool": asdict(tool_prov),
+                        "dataset": asdict(dataset_prov),
+                        "parser": {
+                            "fn": parser_prov.fn,
+                            "options": dict(parser_prov.options),
+                        },
+                    },
+                )
+            except Exception:  # pragma: no cover - never fail a trial on provenance
+                self._logger.debug(
+                    "Unable to stamp provenance for run %s",
+                    result.outputs.run_dir,
+                    exc_info=True,
+                )
+
             if on_record_rows and evaluation.record_rows:
                 on_record_rows(list(evaluation.record_rows))
 
@@ -277,6 +329,18 @@ class AxSweepRunner:
                 self._trial_log_path,
                 exc_info=True,
             )
+
+
+def _parser_fn_repr(fn: Any) -> str | None:
+    """Render a parser callable as a stable ``"package.module:attr"`` string."""
+
+    if fn is None:
+        return None
+    module = getattr(fn, "__module__", None)
+    qualname = getattr(fn, "__qualname__", getattr(fn, "__name__", None))
+    if module and qualname:
+        return f"{module}:{qualname}"
+    return None
 
 
 def _normalize_trial_data(trial_data: Any) -> tuple[int, dict[str, Any]]:
