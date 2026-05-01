@@ -17,12 +17,15 @@ from .loader import (
     ResultsConfig,
     load_analysis,
 )
+from .runner import AnalysisSummary, analyze
 
 __all__ = [
     "AnalysisConfig",
+    "AnalysisSummary",
     "PredictionFilter",
     "PredictionRef",
     "PredictionsConfig",
     "ResultsConfig",
+    "analyze",
     "load_analysis",
 ]

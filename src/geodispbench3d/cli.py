@@ -4,6 +4,7 @@ Usage::
 
     geodispbench3d run <suite.yaml>
     geodispbench3d run <suite.yaml> --rescore [flags]
+    geodispbench3d analyze <analysis.yaml>
     geodispbench3d dashboard [--parquet PATH]
     geodispbench3d list-metrics <metrics.yaml>
 """
@@ -71,10 +72,24 @@ def main(argv: list[str] | None = None) -> int:
     list_p = sub.add_parser("list-metrics", help="List metrics declared in a metrics.yaml")
     list_p.add_argument("metrics", help="Path to metrics.yaml")
 
+    analyze_p = sub.add_parser(
+        "analyze",
+        help="Score cached predictions against a metrics set (no tool involvement)",
+    )
+    analyze_p.add_argument("analysis", help="Path to analysis.yaml")
+    analyze_p.add_argument("--log-level", default="INFO")
+    analyze_p.add_argument(
+        "--pass-id",
+        default=None,
+        help="Override the analysis YAML's pass_id (auto-generated otherwise).",
+    )
+
     args = parser.parse_args(argv)
 
     if args.command == "run":
         return _cmd_run(args)
+    if args.command == "analyze":
+        return _cmd_analyze(args)
     if args.command == "dashboard":
         return _cmd_dashboard(args)
     if args.command == "list-metrics":
@@ -194,6 +209,48 @@ def _cmd_rescore(
         summary.total,
         summary.cache_hits,
         summary.parser_misses,
+        summary.rows_emitted,
+    )
+    return 0 if summary.succeeded == summary.total else 1
+
+
+def _cmd_analyze(args: argparse.Namespace) -> int:
+    """``analyze``: score cached predictions; no tool involvement."""
+
+    logging.basicConfig(
+        level=getattr(logging, args.log_level.upper(), logging.INFO),
+        format="[%(asctime)s][%(name)s][%(levelname)s] %(message)s",
+    )
+    from dataclasses import replace
+
+    from geodispbench3d.analysis import analyze, load_analysis
+    from geodispbench3d.results import ResultsStore
+
+    config = load_analysis(args.analysis)
+    if args.pass_id:
+        config = replace(config, pass_id=args.pass_id)
+
+    logger = logging.getLogger("geodispbench3d.cli")
+    logger.info(
+        "Analyzing %s (dataset=%s, predictions sources=%d, pass_id=%s)",
+        config.id,
+        config.dataset.id,
+        len(config.predictions.refs),
+        config.pass_id or "<auto>",
+    )
+
+    on_record_rows = None
+    if config.results.parquet_path is not None:
+        store = ResultsStore(parquet_path=config.results.parquet_path)
+        on_record_rows = store.append
+
+    summary = analyze(config=config, on_record_rows=on_record_rows, logger=logger)
+    logger.info(
+        "Analyze done: %d/%d predictions scored (unreadable=%d, no_case=%d, rows=%d)",
+        summary.succeeded,
+        summary.total,
+        summary.skipped_unreadable,
+        summary.skipped_no_case,
         summary.rows_emitted,
     )
     return 0 if summary.succeeded == summary.total else 1
