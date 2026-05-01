@@ -16,6 +16,7 @@ Adding a new tool is a YAML-and-glue exercise; see the integration guide below.
 
 - [Quickstart](quickstart.md) — run a sweep in five minutes against a pre-built tool.
 - [Concepts](concepts.md) — what the four YAML files describe and how they fit together.
+- [Rescoring and analysis](rescoring-and-analysis.md) — re-evaluate existing runs without re-running the tool, or score cached predictions across tools.
 
 ## Pre-built tools
 

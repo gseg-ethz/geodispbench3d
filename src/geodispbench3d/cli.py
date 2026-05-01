@@ -3,6 +3,8 @@
 Usage::
 
     geodispbench3d run <suite.yaml>
+    geodispbench3d run <suite.yaml> --rescore [flags]
+    geodispbench3d analyze <analysis.yaml>
     geodispbench3d dashboard [--parquet PATH]
     geodispbench3d list-metrics <metrics.yaml>
 """
@@ -28,6 +30,37 @@ def main(argv: list[str] | None = None) -> int:
         default=None,
         help="Override suite.search.max_trials",
     )
+    run_p.add_argument(
+        "--rescore",
+        action="store_true",
+        help=(
+            "Skip the tool: walk every existing run dir under "
+            "results.run_dir_root and re-evaluate metrics against the "
+            "current suite. Ax is not invoked."
+        ),
+    )
+    run_p.add_argument(
+        "--reuse-parser-options",
+        action="store_true",
+        help=(
+            "(--rescore only) reproduce the parser configuration recorded "
+            "in each trial's summary.json instead of using the suite's "
+            "current output_parser options."
+        ),
+    )
+    run_p.add_argument(
+        "--use-prediction-cache",
+        action="store_true",
+        help=(
+            "(--rescore only) load predictions from the predictions cache "
+            "when available, skipping phase 2 entirely."
+        ),
+    )
+    run_p.add_argument(
+        "--pass-id",
+        default=None,
+        help="(--rescore only) tag this rescore pass in the parquet rows.",
+    )
 
     dash_p = sub.add_parser("dashboard", help="Launch the Streamlit dashboard")
     dash_p.add_argument(
@@ -39,10 +72,24 @@ def main(argv: list[str] | None = None) -> int:
     list_p = sub.add_parser("list-metrics", help="List metrics declared in a metrics.yaml")
     list_p.add_argument("metrics", help="Path to metrics.yaml")
 
+    analyze_p = sub.add_parser(
+        "analyze",
+        help="Score cached predictions against a metrics set (no tool involvement)",
+    )
+    analyze_p.add_argument("analysis", help="Path to analysis.yaml")
+    analyze_p.add_argument("--log-level", default="INFO")
+    analyze_p.add_argument(
+        "--pass-id",
+        default=None,
+        help="Override the analysis YAML's pass_id (auto-generated otherwise).",
+    )
+
     args = parser.parse_args(argv)
 
     if args.command == "run":
         return _cmd_run(args)
+    if args.command == "analyze":
+        return _cmd_analyze(args)
     if args.command == "dashboard":
         return _cmd_dashboard(args)
     if args.command == "list-metrics":
@@ -58,44 +105,58 @@ def _cmd_run(args: argparse.Namespace) -> int:
     )
     from geodispbench3d.results import ResultsStore
     from geodispbench3d.suite.loader import load_suite
-    from geodispbench3d.sweep.parameters import SweepConfig, build_parameter_specs
-    from geodispbench3d.sweep.runner import AxSweepRunner
 
     suite = load_suite(args.suite)
-    max_trials = args.max_trials or suite.search.max_trials
-
-    sweep_cfg = SweepConfig(
-        parameters=suite.tool.hyperparameters,
-        max_trials=max_trials,
-        sobol_trials=suite.search.sobol_trials,
-        objective_name=suite.search.objective,
-        minimize=suite.search.minimize,
-    )
-    parameter_specs = build_parameter_specs(sweep_cfg)
-
     logger = logging.getLogger("geodispbench3d.cli")
-    logger.info(
-        "Running suite %s (tool=%s, dataset=%s, trials=%d, objective=%s)",
-        suite.id,
-        suite.tool.id,
-        suite.dataset.id,
-        max_trials,
-        suite.search.objective,
-    )
-
-    runner = AxSweepRunner(
-        adapter=suite.tool.adapter,
-        sweep_config=sweep_cfg,
-        parameter_specs=parameter_specs,
-        objective_name=suite.search.objective,
-        minimize=suite.search.minimize,
-        logger=logger,
-    )
 
     on_record_rows = None
     if suite.results.parquet_path is not None:
         store = ResultsStore(parquet_path=suite.results.parquet_path)
         on_record_rows = store.append
+
+    if args.rescore:
+        return _cmd_rescore(args, suite, on_record_rows, logger)
+
+    return _cmd_sweep(args, suite, on_record_rows, logger)
+
+
+def _cmd_sweep(
+    args: argparse.Namespace,
+    suite: object,
+    on_record_rows,
+    logger: logging.Logger,
+) -> int:
+    from geodispbench3d.sweep.parameters import SweepConfig, build_parameter_specs
+    from geodispbench3d.sweep.runner import AxSweepRunner
+
+    max_trials = args.max_trials or suite.search.max_trials  # type: ignore[attr-defined]
+
+    sweep_cfg = SweepConfig(
+        parameters=suite.tool.hyperparameters,  # type: ignore[attr-defined]
+        max_trials=max_trials,
+        sobol_trials=suite.search.sobol_trials,  # type: ignore[attr-defined]
+        objective_name=suite.search.objective,  # type: ignore[attr-defined]
+        minimize=suite.search.minimize,  # type: ignore[attr-defined]
+    )
+    parameter_specs = build_parameter_specs(sweep_cfg)
+
+    logger.info(
+        "Running suite %s (tool=%s, dataset=%s, trials=%d, objective=%s)",
+        suite.id,  # type: ignore[attr-defined]
+        suite.tool.id,  # type: ignore[attr-defined]
+        suite.dataset.id,  # type: ignore[attr-defined]
+        max_trials,
+        suite.search.objective,  # type: ignore[attr-defined]
+    )
+
+    runner = AxSweepRunner(
+        adapter=suite.tool.adapter,  # type: ignore[attr-defined]
+        sweep_config=sweep_cfg,
+        parameter_specs=parameter_specs,
+        objective_name=suite.search.objective,  # type: ignore[attr-defined]
+        minimize=suite.search.minimize,  # type: ignore[attr-defined]
+        logger=logger,
+    )
 
     best = runner.run_with_suite(
         suite=suite,
@@ -104,6 +165,95 @@ def _cmd_run(args: argparse.Namespace) -> int:
     )
     logger.info("Best trial: %s", best)
     return 0
+
+
+def _cmd_rescore(
+    args: argparse.Namespace,
+    suite: object,
+    on_record_rows,
+    logger: logging.Logger,
+) -> int:
+    """``run --rescore``: skip the tool, re-run metrics over existing run dirs."""
+
+    from geodispbench3d.sweep.rescore import RescoreOptions, rescore_suite
+
+    if args.max_trials is not None:
+        logger.warning("--max-trials is ignored in --rescore mode")
+
+    options = RescoreOptions(
+        reuse_parser_options=bool(args.reuse_parser_options),
+        use_prediction_cache=bool(args.use_prediction_cache),
+        pass_id=args.pass_id,
+    )
+
+    logger.info(
+        "Rescoring suite %s (tool=%s, dataset=%s, "
+        "reuse_parser_options=%s, use_prediction_cache=%s, pass_id=%s)",
+        suite.id,  # type: ignore[attr-defined]
+        suite.tool.id,  # type: ignore[attr-defined]
+        suite.dataset.id,  # type: ignore[attr-defined]
+        options.reuse_parser_options,
+        options.use_prediction_cache,
+        options.resolved_pass_id(),
+    )
+
+    summary = rescore_suite(
+        suite=suite,
+        options=options,
+        on_record_rows=on_record_rows,
+        logger=logger,
+    )
+    logger.info(
+        "Rescore done: %d/%d run dirs scored (cache_hits=%d, parser_failed=%d, rows=%d)",
+        summary.succeeded,
+        summary.total,
+        summary.cache_hits,
+        summary.parser_misses,
+        summary.rows_emitted,
+    )
+    return 0 if summary.succeeded == summary.total else 1
+
+
+def _cmd_analyze(args: argparse.Namespace) -> int:
+    """``analyze``: score cached predictions; no tool involvement."""
+
+    logging.basicConfig(
+        level=getattr(logging, args.log_level.upper(), logging.INFO),
+        format="[%(asctime)s][%(name)s][%(levelname)s] %(message)s",
+    )
+    from dataclasses import replace
+
+    from geodispbench3d.analysis import analyze, load_analysis
+    from geodispbench3d.results import ResultsStore
+
+    config = load_analysis(args.analysis)
+    if args.pass_id:
+        config = replace(config, pass_id=args.pass_id)
+
+    logger = logging.getLogger("geodispbench3d.cli")
+    logger.info(
+        "Analyzing %s (dataset=%s, predictions sources=%d, pass_id=%s)",
+        config.id,
+        config.dataset.id,
+        len(config.predictions.refs),
+        config.pass_id or "<auto>",
+    )
+
+    on_record_rows = None
+    if config.results.parquet_path is not None:
+        store = ResultsStore(parquet_path=config.results.parquet_path)
+        on_record_rows = store.append
+
+    summary = analyze(config=config, on_record_rows=on_record_rows, logger=logger)
+    logger.info(
+        "Analyze done: %d/%d predictions scored (unreadable=%d, no_case=%d, rows=%d)",
+        summary.succeeded,
+        summary.total,
+        summary.skipped_unreadable,
+        summary.skipped_no_case,
+        summary.rows_emitted,
+    )
+    return 0 if summary.succeeded == summary.total else 1
 
 
 def _cmd_dashboard(args: argparse.Namespace) -> int:

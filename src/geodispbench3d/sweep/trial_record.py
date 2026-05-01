@@ -1,12 +1,77 @@
-"""Persist per-trial JSON records alongside a run directory."""
+"""Persist per-trial JSON records alongside a run directory.
+
+Layout under each run directory::
+
+    <run_dir>/ax_trial/
+        summary.json        # this module — trial provenance + metrics
+        config.yaml         # tool-specific (e.g. iof3D writes its
+                            # resolved AppConfig there)
+        predictions.json    # cached phase-2 output (see
+                            # geodispbench3d.results.predictions_cache)
+
+The summary structure is intentionally flat and forward-compatible:
+fields added in future versions are written with sensible defaults; old
+summaries missing those fields are read with ``None``. ``rescore_log`` is
+the one append-only field — every ``--rescore`` pass appends one entry
+so the audit trail is preserved.
+"""
 
 from __future__ import annotations
 
+import hashlib
 import json
 from collections.abc import Mapping, Sequence
+from dataclasses import asdict, dataclass, field
 from datetime import datetime
 from pathlib import Path
 from typing import Any
+
+# ---------------------------------------------------------------------------
+# Provenance dataclasses (the new metadata blocks for the enriched record)
+# ---------------------------------------------------------------------------
+
+
+@dataclass(frozen=True)
+class ToolProvenance:
+    """Which tool produced this run, and which version of its config."""
+
+    id: str
+    yaml_path: str | None = None
+    yaml_hash: str | None = None  # sha256 of the resolved tool YAML
+
+    @classmethod
+    def from_yaml_path(cls, tool_id: str, yaml_path: Path | None) -> ToolProvenance:
+        return cls(
+            id=tool_id,
+            yaml_path=str(yaml_path) if yaml_path is not None else None,
+            yaml_hash=hash_file(yaml_path) if yaml_path is not None else None,
+        )
+
+
+@dataclass(frozen=True)
+class DatasetProvenance:
+    """Which dataset case this trial scored against."""
+
+    id: str
+    case: str | None = None
+
+
+@dataclass(frozen=True)
+class ParserProvenance:
+    """Phase-2 parser configuration that produced the prediction.
+
+    Storing this lets ``--rescore --reuse-parser-options`` reproduce the
+    exact phase-2 output from a previous trial, while plain ``--rescore``
+    can override with the suite's current options.
+    """
+
+    fn: str | None = None
+    options: Mapping[str, Any] = field(default_factory=dict)
+
+
+# ---------------------------------------------------------------------------
+# I/O primitives
+# ---------------------------------------------------------------------------
 
 
 def trial_record_path(run_dir: Path) -> Path:
@@ -28,7 +93,7 @@ def load_trial_record(path: Path) -> dict[str, Any]:
 def write_trial_record(path: Path, payload: Mapping[str, Any]) -> None:
     tmp = path.with_suffix(".tmp")
     with tmp.open("w", encoding="utf-8") as fh:
-        json.dump(payload, fh, indent=2, sort_keys=True)
+        json.dump(payload, fh, indent=2, sort_keys=True, default=str)
     tmp.replace(path)
 
 
@@ -39,12 +104,33 @@ def update_trial_record(run_dir: Path, updates: Mapping[str, Any]) -> None:
     write_trial_record(path, payload)
 
 
+def append_rescore_entry(run_dir: Path, entry: Mapping[str, Any]) -> None:
+    """Append a rescore audit entry without clobbering prior runs."""
+
+    path = trial_record_path(run_dir)
+    payload = load_trial_record(path)
+    log = payload.get("rescore_log") or []
+    log.append(dict(entry))
+    payload["rescore_log"] = log
+    write_trial_record(path, payload)
+
+
+# ---------------------------------------------------------------------------
+# Lifecycle helpers (called by the runner / adapters)
+# ---------------------------------------------------------------------------
+
+
 def initialize_trial_record(
     run_dir: Path,
     parameters: Mapping[str, Any],
     run_hash: str | None = None,
+    *,
+    tool: ToolProvenance | None = None,
+    dataset: DatasetProvenance | None = None,
 ) -> None:
-    timestamp = datetime.utcnow().isoformat(timespec="seconds") + "Z"
+    """Mark a run dir as "running" and stamp provenance once at trial start."""
+
+    timestamp = _utcnow()
     payload: dict[str, Any] = {
         "status": "running",
         "parameters": dict(parameters),
@@ -52,6 +138,10 @@ def initialize_trial_record(
     }
     if run_hash is not None:
         payload["run_hash"] = run_hash
+    if tool is not None:
+        payload["tool"] = asdict(tool)
+    if dataset is not None:
+        payload["dataset"] = asdict(dataset)
     update_trial_record(run_dir, payload)
 
 
@@ -63,20 +153,28 @@ def store_trial_metadata(
     *,
     predictions: Sequence[Path] = (),
     figures: Sequence[Path] = (),
+    tool: ToolProvenance | None = None,
+    dataset: DatasetProvenance | None = None,
+    parser: ParserProvenance | None = None,
     extras: Mapping[str, Any] | None = None,
 ) -> None:
     """Persist a JSON summary of a successful trial."""
 
-    completed_at = datetime.utcnow().isoformat(timespec="seconds") + "Z"
     payload: dict[str, Any] = {
         "status": "success",
         "parameters": dict(parameters),
         "metrics": dict(metrics),
         "runtime_seconds": runtime_seconds,
-        "completed_at": completed_at,
+        "completed_at": _utcnow(),
         "predictions": [str(p) for p in predictions],
         "figures": [str(p) for p in figures],
     }
+    if tool is not None:
+        payload["tool"] = asdict(tool)
+    if dataset is not None:
+        payload["dataset"] = asdict(dataset)
+    if parser is not None:
+        payload["parser"] = _parser_payload(parser)
     if extras:
         payload.update(extras)
     update_trial_record(run_dir, payload)
@@ -88,26 +186,116 @@ def store_trial_failure(
     runtime_seconds: float,
     error: Exception,
     *,
+    tool: ToolProvenance | None = None,
+    dataset: DatasetProvenance | None = None,
     extras: Mapping[str, Any] | None = None,
 ) -> None:
     """Persist failure metadata when a trial aborts."""
 
-    completed_at = datetime.utcnow().isoformat(timespec="seconds") + "Z"
     payload: dict[str, Any] = {
         "status": "failure",
         "parameters": dict(parameters),
         "runtime_seconds": runtime_seconds,
         "error": str(error),
-        "completed_at": completed_at,
+        "completed_at": _utcnow(),
     }
+    if tool is not None:
+        payload["tool"] = asdict(tool)
+    if dataset is not None:
+        payload["dataset"] = asdict(dataset)
     if extras:
         payload.update(extras)
     update_trial_record(run_dir, payload)
 
 
+# ---------------------------------------------------------------------------
+# Provenance read-back (used by --rescore + analyze)
+# ---------------------------------------------------------------------------
+
+
+def read_provenance(
+    run_dir: Path,
+) -> tuple[ToolProvenance | None, DatasetProvenance | None, ParserProvenance | None]:
+    """Return ``(tool, dataset, parser)`` provenance from a run's summary.
+
+    Older records lacking these blocks return ``None`` for the missing
+    pieces; callers should be ready for that and fall back to whatever the
+    current suite/analysis YAML declares.
+    """
+
+    record = load_trial_record(trial_record_path(run_dir))
+    return (
+        _tool_from_record(record),
+        _dataset_from_record(record),
+        _parser_from_record(record),
+    )
+
+
+def _tool_from_record(record: Mapping[str, Any]) -> ToolProvenance | None:
+    block = record.get("tool")
+    if not isinstance(block, Mapping):
+        return None
+    return ToolProvenance(
+        id=str(block.get("id", "")),
+        yaml_path=block.get("yaml_path"),
+        yaml_hash=block.get("yaml_hash"),
+    )
+
+
+def _dataset_from_record(record: Mapping[str, Any]) -> DatasetProvenance | None:
+    block = record.get("dataset")
+    if not isinstance(block, Mapping):
+        return None
+    return DatasetProvenance(id=str(block.get("id", "")), case=block.get("case"))
+
+
+def _parser_from_record(record: Mapping[str, Any]) -> ParserProvenance | None:
+    block = record.get("parser")
+    if not isinstance(block, Mapping):
+        return None
+    return ParserProvenance(
+        fn=block.get("fn"),
+        options=dict(block.get("options") or {}),
+    )
+
+
+# ---------------------------------------------------------------------------
+# Internals
+# ---------------------------------------------------------------------------
+
+
+def _parser_payload(parser: ParserProvenance) -> dict[str, Any]:
+    return {"fn": parser.fn, "options": dict(parser.options or {})}
+
+
+def _utcnow() -> str:
+    return datetime.utcnow().isoformat(timespec="seconds") + "Z"
+
+
+def hash_file(path: Path | None) -> str | None:
+    """Return the sha256 of a file's bytes, or ``None`` when unavailable."""
+
+    if path is None:
+        return None
+    p = Path(path)
+    if not p.is_file():
+        return None
+    h = hashlib.sha256()
+    with p.open("rb") as fh:
+        for chunk in iter(lambda: fh.read(8192), b""):
+            h.update(chunk)
+    return f"sha256:{h.hexdigest()}"
+
+
 __all__ = [
+    "DatasetProvenance",
+    "ParserProvenance",
+    "ToolProvenance",
+    "append_rescore_entry",
+    "hash_file",
     "initialize_trial_record",
     "load_trial_record",
+    "read_provenance",
     "store_trial_failure",
     "store_trial_metadata",
     "trial_record_path",

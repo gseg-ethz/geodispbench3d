@@ -36,11 +36,16 @@ class EvaluationOutput:
     """Per-trial evaluation result split by audience.
 
     ``scalar_metrics`` feeds Ax (only floats survive). ``record_rows`` is a
-    flat list of dicts ready to append to a parquet file.
+    flat list of dicts ready to append to a parquet file. ``prediction``
+    is the raw phase-2 output from the parser (or ``None`` when the trial
+    skipped phase 2 entirely); the runner caches it to disk so future
+    ``--rescore`` and ``analyze`` passes can reuse it without re-running
+    the parser.
     """
 
     scalar_metrics: Mapping[str, float]
     record_rows: Sequence[Mapping[str, Any]] = field(default_factory=list)
+    prediction: Any = None
 
 
 def evaluate_trial(
@@ -52,7 +57,9 @@ def evaluate_trial(
     registry: MetricRegistry,
     output_parser: Callable[..., Any] | None = None,
     output_parser_options: Mapping[str, Any] | None = None,
+    prediction_override: Any = None,
     trial_index: int | None = None,
+    record_extras: Mapping[str, Any] | None = None,
     logger: logging.Logger | None = None,
 ) -> EvaluationOutput:
     """Run a tool's output through the metric registry for a single case.
@@ -66,8 +73,11 @@ def evaluate_trial(
 
     ground_truth = load_ground_truth(case.ground_truth) if case.ground_truth is not None else None
 
-    prediction: Any = None
-    if output_parser is not None:
+    # ``prediction_override`` short-circuits phase 2 — the analyze flow
+    # passes a cached prediction here instead of re-running the parser.
+    if prediction_override is not None:
+        prediction: Any = prediction_override
+    elif output_parser is not None:
         try:
             prediction = output_parser(
                 outputs=trial_result.outputs,
@@ -79,6 +89,8 @@ def evaluate_trial(
         except Exception:
             log.exception("Output parser failed for trial in %s", trial_result.outputs.run_dir)
             prediction = None
+    else:
+        prediction = None
 
     trial_meta: dict[str, Any] = {
         "trial_index": trial_index,
@@ -113,6 +125,8 @@ def evaluate_trial(
                 value,
             )
 
+    extras = dict(record_extras or {})
+
     for definition in metrics.record_metrics:
         if not _gt_kind_matches(definition, gt_kind):
             continue
@@ -121,14 +135,13 @@ def evaluate_trial(
         )
         if value is None:
             continue
-        if isinstance(value, Mapping):
-            record_rows.append({**value, "metric": definition.id})
-        else:
-            for row in value:
-                if isinstance(row, Mapping):
-                    record_rows.append({**row, "metric": definition.id})
+        rows_for_metric: list[Mapping[str, Any]] = (
+            [value] if isinstance(value, Mapping) else [r for r in value if isinstance(r, Mapping)]
+        )
+        for row in rows_for_metric:
+            record_rows.append({**extras, **row, "metric": definition.id})
 
-    return EvaluationOutput(scalar_metrics=scalar, record_rows=record_rows)
+    return EvaluationOutput(scalar_metrics=scalar, record_rows=record_rows, prediction=prediction)
 
 
 def _gt_kind_matches(definition: MetricDefinition, gt_kind: str | None) -> bool:
