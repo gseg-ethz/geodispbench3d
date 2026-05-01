@@ -1,0 +1,45 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://geodispbench3d/schema/analysis.json",
+  "title": "geodispbench3d analysis config",
+  "description": "Re-score cached predictions across tools. No tool reference; the dataset + metrics + cached predictions are the only inputs.",
+  "type": "object",
+  "required": ["id", "dataset", "metrics", "predictions"],
+  "properties": {
+    "id": {"type": "string"},
+    "dataset": {"type": "string"},
+    "metrics": {"type": "string"},
+    "pass_id": {"type": "string"},
+    "predictions": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "oneOf": [
+          {"required": ["path"]},
+          {"required": ["glob"]},
+          {"required": ["root"]}
+        ],
+        "properties": {
+          "path": {"type": "string"},
+          "glob": {"type": "string"},
+          "root": {"type": "string"},
+          "filter": {
+            "type": "object",
+            "properties": {
+              "tool_id": {"type": "string"},
+              "dataset_id": {"type": "string"},
+              "case": {"type": "string"}
+            }
+          }
+        }
+      }
+    },
+    "results": {
+      "type": "object",
+      "properties": {
+        "parquet_path": {"type": "string"}
+      }
+    }
+  }
+}

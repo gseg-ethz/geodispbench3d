@@ -75,6 +75,7 @@ packages = [
     "geodispbench3d.metrics",
     "geodispbench3d.sweep",
     "geodispbench3d.suite",
+    "geodispbench3d.analysis",
     "geodispbench3d.results",
     "geodispbench3d.dashboard",
     "geodispbench3d_iof3d",
