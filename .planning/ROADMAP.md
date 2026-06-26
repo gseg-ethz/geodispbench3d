@@ -34,7 +34,9 @@ Decimal phases appear between their surrounding integers in numeric order.
   2. Each of the three architecture-flagged anti-patterns (untyped `SuiteConfig`, duplicated `SweepParameter` coercion, duplicated `_parser_fn_repr`) is evaluated and given a disposition
   3. The three CLI surfaces (`cli.py`, `CliToolAdapter`, F2S3 `conda-run`) each have a focused risk assessment in the report
   4. Every finding carries a severity rating and one of: fix / defer / accept
-**Plans**: TBD
+**Plans**: 2 plans
+- [ ] 01-01-PLAN.md — Run the locked detector set (vulture/coverage/deptry/radon) via the conda env, capture reproducible evidence, and distill EVIDENCE.md
+- [ ] 01-02-PLAN.md — Reasoned manual file:line review (incl. design-sensibility D-07 + CONCERNS re-verify) and assemble the single severity-classified, disposition-recommended REPORT.md
 
 ### Phase 2: Targeted Fixes
 **Goal**: All audit-mandated fixes are applied, dead code is removed, and the full quality-tool suite (ruff, pyright, pytest) passes cleanly
