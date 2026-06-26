@@ -61,3 +61,6 @@ runs/
 # OS
 .DS_Store
 Thumbs.db
+
+# Editor / workspace
+*.code-workspace
