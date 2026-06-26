@@ -18,7 +18,7 @@ publishing close the loop.
 
 Decimal phases appear between their surrounding integers in numeric order.
 
-- [ ] **Phase 1: Code-Health Audit** - Read-only audit producing a written findings report that gates all subsequent work
+- [x] **Phase 1: Code-Health Audit** - Read-only audit producing a written findings report that gates all subsequent work (completed 2026-06-26)
 - [ ] **Phase 2: Targeted Fixes** - Apply audit-scoped fixes until the full test and quality-tool suite passes
 - [ ] **Phase 3: CLI Hardening** - Harden all three CLI surfaces; document F2S3 as the canonical CliToolAdapter example
 - [ ] **Phase 4: Licensing, Metadata & Packaging** - Reconcile license, drop Private classifier, untangle packaging deps; resolve open iof3d/pchandler decisions
@@ -38,14 +38,14 @@ Decimal phases appear between their surrounding integers in numeric order.
   3. The three CLI surfaces (`cli.py`, `CliToolAdapter`, F2S3 `conda-run`) each have a focused risk assessment in the report
   4. Every finding carries a severity rating and one of: fix / defer / accept
 
-**Plans**: 0/2 plans executed
+**Plans**: 2/2 plans complete
 **Wave 1**
 
-- [ ] 01-01-PLAN.md — Run the locked detector set (vulture/coverage/deptry/radon) via the conda env, capture reproducible evidence, and distill EVIDENCE.md
+- [x] 01-01-PLAN.md — Run the locked detector set (vulture/coverage/deptry/radon) via the conda env, capture reproducible evidence, and distill EVIDENCE.md
 
 **Wave 2** *(blocked on Wave 1 completion)*
 
-- [ ] 01-02-PLAN.md — Reasoned manual file:line review (incl. design-sensibility D-07 + CONCERNS re-verify) and assemble the single severity-classified, disposition-recommended REPORT.md
+- [x] 01-02-PLAN.md — Reasoned manual file:line review (incl. design-sensibility D-07 + CONCERNS re-verify) and assemble the single severity-classified, disposition-recommended REPORT.md
 
 ### Phase 2: Targeted Fixes
 
@@ -116,7 +116,7 @@ Decimal phases appear between their surrounding integers in numeric order.
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
-| 1. Code-Health Audit | 0/2 | Planned    |  |
+| 1. Code-Health Audit | 2/2 | Complete   | 2026-06-26 |
 | 2. Targeted Fixes | 0/? | Not started | - |
 | 3. CLI Hardening | 0/? | Not started | - |
 | 4. Licensing, Metadata & Packaging | 0/? | Not started | - |

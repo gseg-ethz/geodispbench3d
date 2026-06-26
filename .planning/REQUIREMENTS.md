@@ -10,9 +10,9 @@ Requirements for this milestone. Each maps to roadmap phases.
 ### Audit
 
 - [x] **AUDIT-01**: A written code-health findings report is produced covering bloat, dead code, and duplication across `src/`
-- [ ] **AUDIT-02**: The report evaluates the three architecture-flagged anti-patterns (untyped `SuiteConfig`, duplicated `SweepParameter` coercion, duplicated `_parser_fn_repr`)
-- [ ] **AUDIT-03**: The report includes a focused risk review of the three CLI surfaces (package `cli.py`, `CliToolAdapter`, F2S3 `conda-run`)
-- [ ] **AUDIT-04**: Each finding is severity-classified and tagged with a recommended disposition (fix / defer / accept)
+- [x] **AUDIT-02**: The report evaluates the three architecture-flagged anti-patterns (untyped `SuiteConfig`, duplicated `SweepParameter` coercion, duplicated `_parser_fn_repr`)
+- [x] **AUDIT-03**: The report includes a focused risk review of the three CLI surfaces (package `cli.py`, `CliToolAdapter`, F2S3 `conda-run`)
+- [x] **AUDIT-04**: Each finding is severity-classified and tagged with a recommended disposition (fix / defer / accept)
 
 ### Fixes
 
@@ -80,9 +80,9 @@ Which phases cover which requirements. Updated during roadmap creation.
 | Requirement | Phase | Status |
 |-------------|-------|--------|
 | AUDIT-01 | Phase 1 | Complete |
-| AUDIT-02 | Phase 1 | Pending |
-| AUDIT-03 | Phase 1 | Pending |
-| AUDIT-04 | Phase 1 | Pending |
+| AUDIT-02 | Phase 1 | Complete |
+| AUDIT-03 | Phase 1 | Complete |
+| AUDIT-04 | Phase 1 | Complete |
 | FIX-01 | Phase 2 | Pending |
 | FIX-02 | Phase 2 | Pending |
 | FIX-03 | Phase 2 | Pending |
