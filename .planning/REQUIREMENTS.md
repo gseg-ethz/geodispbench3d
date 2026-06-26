@@ -79,13 +79,36 @@ Which phases cover which requirements. Updated during roadmap creation.
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| (populated by roadmap) | | |
+| AUDIT-01 | Phase 1 | Pending |
+| AUDIT-02 | Phase 1 | Pending |
+| AUDIT-03 | Phase 1 | Pending |
+| AUDIT-04 | Phase 1 | Pending |
+| FIX-01 | Phase 2 | Pending |
+| FIX-02 | Phase 2 | Pending |
+| FIX-03 | Phase 2 | Pending |
+| FIX-04 | Phase 2 | Pending |
+| CLI-01 | Phase 3 | Pending |
+| CLI-02 | Phase 3 | Pending |
+| CLI-03 | Phase 3 | Pending |
+| CLI-04 | Phase 3 | Pending |
+| CLI-05 | Phase 3 | Pending |
+| LIC-01 | Phase 4 | Pending |
+| LIC-02 | Phase 4 | Pending |
+| LIC-03 | Phase 4 | Pending |
+| LIC-04 | Phase 4 | Pending |
+| PKG-01 | Phase 4 | Pending |
+| PKG-02 | Phase 4 | Pending |
+| PKG-03 | Phase 4 | Pending |
+| CICD-01 | Phase 5 | Pending |
+| CICD-02 | Phase 5 | Pending |
+| CICD-03 | Phase 5 | Pending |
+| CICD-04 | Phase 5 | Pending |
 
 **Coverage:**
 - v1 requirements: 24 total
-- Mapped to phases: 0 (pending roadmap)
-- Unmapped: 24 ⚠️
+- Mapped to phases: 24 (all phases)
+- Unmapped: 0
 
 ---
 *Requirements defined: 2026-06-26*
-*Last updated: 2026-06-26 after F2S3 / packaging discussion*
+*Last updated: 2026-06-26 — traceability populated after roadmap creation*
