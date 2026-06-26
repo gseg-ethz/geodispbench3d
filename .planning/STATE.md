@@ -23,7 +23,7 @@ See: .planning/PROJECT.md (updated 2026-06-26)
 Phase: 1 of 5 (Code-Health Audit)
 Plan: 0 of ? in current phase
 Status: Ready to plan
-Last activity: 2026-06-26 — Roadmap created; 24 v1 requirements mapped across 5 phases
+Last activity: 2026-06-26 — Completed quick task 260626-jix: Create OVERVIEW.md one-pager for ETH open-source docs
 
 Progress: [░░░░░░░░░░] 0%
 
@@ -70,6 +70,12 @@ None yet.
 ### Blockers/Concerns
 
 None yet.
+
+### Quick Tasks Completed
+
+| # | Description | Date | Commit | Directory |
+|---|-------------|------|--------|-----------|
+| 260626-jix | Create OVERVIEW.md one-pager for ETH open-source docs | 2026-06-26 | 7273891 | [260626-jix-create-overview-md-one-pager-for-eth-ope](./quick/260626-jix-create-overview-md-one-pager-for-eth-ope/) |
 
 ## Deferred Items
 
