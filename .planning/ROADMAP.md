@@ -59,7 +59,29 @@ Decimal phases appear between their surrounding integers in numeric order.
   3. `SweepParameter` construction is handled by a single source (e.g. `from_mapping` classmethod); `_parser_fn_repr` lives in one shared location, not two
   4. `ruff`, `pyright`, and the full `pytest` suite (core, iof3d, f2s3) pass without errors after every fix lands
 
-**Plans**: TBD
+**Plans**: 7 plans
+
+**Wave 0** *(test net + pyright baseline — D-04 tests-first)*
+
+- [ ] 02-01-PLAN.md — F-20 runner.py characterization net (fake AxClient + stub adapter; the regression anchor)
+- [ ] 02-02-PLAN.md — F-21 store + F-22 evaluation failure-path tests + CI-faithful pyright baseline
+
+**Wave 1** *(blocked on Wave 0)*
+
+- [ ] 02-03-PLAN.md — F-01 typed SuiteConfig + F-13 provenance fold + F-05 finite-case surfacing
+- [ ] 02-04-PLAN.md — F-02 SweepParameter.from_mapping dedup (parallel; disjoint files)
+
+**Wave 2** *(blocked on 02-03)*
+
+- [ ] 02-05-PLAN.md — F-08 narrowed excepts + warning + non-fatal counter + CLI summary line
+
+**Wave 3** *(blocked on 02-05)*
+
+- [ ] 02-06-PLAN.md — F-09/F-10/F-11 mechanical hygiene cluster (timestamps, import hoist, dead asdict)
+
+**Wave 4** *(blocked on 02-04 + 02-06)*
+
+- [ ] 02-07-PLAN.md — F-03 parser_fn_repr dedup + F-30 dead-field deletion/guards + final FIX-04 gate
 
 ### Phase 3: CLI Hardening
 
@@ -119,7 +141,7 @@ Decimal phases appear between their surrounding integers in numeric order.
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
 | 1. Code-Health Audit | 2/2 | Complete    | 2026-06-26 |
-| 2. Targeted Fixes | 0/? | Not started | - |
+| 2. Targeted Fixes | 0/7 | Planned | - |
 | 3. CLI Hardening | 0/? | Not started | - |
 | 4. Licensing, Metadata & Packaging | 0/? | Not started | - |
 | 5. CI/CD & Release | 0/? | Not started | - |
