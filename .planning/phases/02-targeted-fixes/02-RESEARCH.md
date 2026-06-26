@@ -381,14 +381,16 @@ Current (fresh run, matches EVIDENCE.md): `runner.py` **13%**, `store.py` **44%*
 | A3 | Stripping the now-inert `gt_kinds_supported:` keys from the 2 dataset YAMLs (+ schema.json) is optional hygiene, not required for correctness. | Primary Answer 2 | None functionally; only doc-consistency drift if skipped. |
 | A4 | The F-08 non-fatal counter for the *sweep* path requires net-new plumbing out of `run_with_suite` (which today returns only the best trial). | F-08 plumbing | If underestimated, F-08 sweep-path work is larger than the rescore/analyze paths (which already carry summary objects). |
 
-## Open Questions
-1. **CI-faithful pyright baseline number.**
+## Open Questions (RESOLVED)
+
+> Both questions are resolved by CONTEXT.md decisions + the Phase-2 plan set (annotated inline below). No open items remain at planning time; the exact baseline NUMBER is a runtime measurement, not an open design question.
+
+1. **CI-faithful pyright baseline number.** — **RESOLVED** by D-11/D-12 + plan 02-02 Task 3.
    - Known: local (1.1.403 + extras) = 21 errors; CI = 1.1.392 + `.[dev]` only.
-   - Unclear: the exact CI error count (extras-unresolved → some errors become warnings).
-   - Recommendation: Wave 0 installs `pyright==1.1.392` in the dev env (or a throwaway venv) with `.[dev]` only, runs `pyright`, and records the count as the D-08 floor.
-2. **Where the sweep-path "N non-fatal failures" line is printed.**
+   - Resolution: D-12 mandates a CI-faithful baseline (`pyright==1.1.392`, `.[dev]`-only) recorded as the floor; D-11 defines the gate as no-regression vs that floor + 0 errors on Phase-2-owned lines. 02-02 Task 3 establishes it (throwaway venv preferred; documented local-superset fallback) and writes `PYRIGHT-BASELINE.md`. The exact count is a one-time runtime measurement, not a design open question.
+2. **Where the sweep-path "N non-fatal failures" line is printed.** — **RESOLVED** by plan 02-05 Task 3.
    - Known: rescore/analyze already print summaries; the sweep path returns only the best trial.
-   - Recommendation: thread a counter object through `run_with_suite`→`_evaluate_across_cases` and print one aggregate line in `cli.py:_cmd_sweep`.
+   - Resolution: 02-05 Task 2 threads a non-fatal-failure counter out of `run_with_suite`→`_evaluate_across_cases` (net-new plumbing per A4); 02-05 Task 3 prints the aggregate line in `cli.py:_cmd_sweep` (and rescore/analyze ride their existing summary objects).
 
 ## Sources
 
