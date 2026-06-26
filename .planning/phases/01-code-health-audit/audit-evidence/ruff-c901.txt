@@ -1,0 +1,13 @@
+# Command: conda run -n iof3d_cosicorr3d-dev312 ruff check src/ --select C901 --config 'lint.mccabe.max-complexity=10' --output-format concise
+# ruff 0.15.12  |  Python 3.12.12 (env iof3d_cosicorr3d-dev312)  |  2026-06-26T15:27:53Z
+# C901 = McCabe cyclomatic complexity. max-complexity=10 (ruff's conventional default); functions ABOVE 10 are flagged.
+# ruff C901 is the PRIMARY/authoritative complexity signal (first-party pinned dev tool, native 3.12).
+# A non-zero exit because findings were FOUND is success, not failure.
+
+ERROR conda.cli.main_run:execute(142): `conda run ruff check src/ --select C901 --config lint.mccabe.max-complexity=10 --output-format concise` failed. (See above for error)
+src/geodispbench3d/sweep/evaluation.py:51:5: C901 `evaluate_trial` is too complex (12 > 10)
+src/geodispbench3d/sweep/parameters.py:116:5: C901 `_build_parameter_spec` is too complex (12 > 10)
+src/geodispbench3d/sweep/runner.py:72:9: C901 `_create_experiment` is too complex (14 > 10)
+src/geodispbench3d_iof3d/adapter.py:128:5: C901 `build_app_config_from_parameters` is too complex (22 > 10)
+src/geodispbench3d_iof3d/cli.py:29:5: C901 `_collect_run_kwargs` is too complex (11 > 10)
+Found 5 errors.
