@@ -32,9 +32,96 @@ env `iof3d_cosicorr3d-dev312` (Python 3.12) per AGENTS.md.
   `file:line` (D-08). Plan 01's detectors (`EVIDENCE.md` + `audit-evidence/`) are cited
   as *corroboration* only, never as the primary inventory.
 
-<!-- SUMMARY_TABLE_ANCHOR -->
+## Summary Findings Table
 
-<!-- AUDIT03_ANCHOR -->
+Every finding indexed by stable ID, location, severity, and recommended disposition
+(D-01). Rows correspond one-to-one with the detail sections below. Dispositions are
+**recommendations pending Phase 2 ratification** (D-05).
+
+| ID | Finding | Location (file:line) | Severity | Disposition | Owner |
+|------|---------|----------------------|----------|-------------|-------|
+| F-01 | Untyped `SuiteConfig` / `suite: Any` + `type: ignore` cluster | cli.py:123-205; runner.py:173,223 | Major | fix | Phase 2 |
+| F-02 | Duplicated `SweepParameter` coercion (x3) | parameters.py:57; tool/loader.py:192; iof3d/factory.py:137 | Major | fix | Phase 2 |
+| F-03 | Duplicated `_parser_fn_repr` (x2) | runner.py:363; rescore.py:395 | Minor | fix | Phase 2 |
+| F-04 | Parquet store O(n^2) + read-modify-write race | results/store.py:30-40 | Major | defer | v2 |
+| F-05 | Cross-case mean aggregation hides partial failures | runner.py:334-346 | Major | fix | Phase 2 |
+| F-06 | `--rescore` exit-code conflation | cli.py:214; rescore.py:106-128 | Major | route-forward | Phase 3 |
+| F-07 | `stdout_json` bottom-up "first `{`" heuristic | cli_adapter.py:190-201 | Major | route-forward | Phase 3 |
+| F-08 | Pervasive broad `except Exception` swallowing | runner/rescore/evaluation/predictions_cache/trial_record | Major | fix | Phase 2 |
+| F-09 | Deprecated `datetime.utcnow()` (x5) | trial_record.py:272; rescore.py:304,406; analysis/runner.py:173; predictions_cache.py:97 | Major | fix | Phase 2 |
+| F-10 | Lazy imports inside the per-case hot loop | runner.py:232-282,308,339 | Minor | fix | Phase 2 |
+| F-11 | `_ = asdict` lint-suppression hack | rescore.py:27,409-410 | Minor | fix | Phase 2 |
+| F-12 | 220-line field-by-field `build_app_config_from_parameters` | iof3d/adapter.py:128-347 | Major | defer | v2 |
+| F-13 | `getattr...or getattr...lambda` provenance chain | runner.py:238-241 | Major | fix | Phase 2 |
+| F-14 | Ax API compatibility shims (signature introspection) | runner.py:17-28,72-136,375-409 | Major | defer | v2 |
+| F-15 | iof3D adapter coupling to upstream private dataclasses | iof3d/adapter.py:19-27,128-347; factory.py:18 | Major | defer | v2 |
+| F-16 | F2S3 `subprocess` + `conda run` coupling; untested e2e | f2s3.yaml:13; cli_adapter.py:98-150 | Major | route-forward | Phase 3 |
+| F-32 | `CliToolAdapter` subprocess has no timeout | cli_adapter.py:107-114 | Major | route-forward | Phase 3 |
+| F-17 | In-memory full-cloud load + merge in parsers | f2s3/output_parser.py:126-145; iof3d/output_parser.py:108-122 | Minor | defer | v2 |
+| F-18 | Only one GT kind implemented (doc/impl mismatch) | dataset/ground_truth.py:63-73,118 | Minor | accept | - |
+| F-19 | No sweep checkpoint / resume | runner.py:69,200-221 | Major | defer | v2 |
+| F-20 | `runner.py` untested (13%) | sweep/runner.py | Major | fix | Phase 2 |
+| F-21 | `store.py` untested (44%) | results/store.py | Major | fix | Phase 2 |
+| F-22 | `evaluation.py` failure-paths + 3 modules indirectly covered | evaluation.py:89-93,118-122,177-179 | Minor | fix | Phase 2 |
+| F-23 | iof3D adapter untested (CI job disabled) | ci.yml:60; iof3d/adapter.py | Major | route-forward | Phase 5 |
+| F-24 | Arbitrary code execution from YAML (by design) | tool/loader.py:152-221; registry.py:63-73; rescore.py:384-392 | Minor | accept | - |
+| F-25 | Subprocess from YAML `entry` (shell=False, positive) | cli_adapter.py:108-114,167-185 | Minor | accept | - |
+| F-26 | `Private :: Do Not Upload` classifier | pyproject.toml:21-23 | Blocker | route-forward | Phase 4 |
+| F-27 | README "Proprietary" vs BSD `LICENSE` | README.md:80-82 | Blocker | route-forward | Phase 4 |
+| F-28 | iof3d CI test job disabled | ci.yml:58-60 | Major | route-forward | Phase 5 |
+| F-29 | Empty `f2s3` extra / packaging story undecided | pyproject.toml:56-59 | Minor | route-forward | Phase 4 |
+| F-30 | Declared-but-unread config/schema fields | suite/loader.py:30-31; schema.py:53-67; trial_record.py:40; tool/loader.py:44 | Minor | fix | Phase 2 |
+| F-31 | Legacy `iof3d-ax` CLI unexercised + dup grammar | iof3d/cli.py:9-134; pyproject.toml:40 | Minor | route-forward | Phase 4 |
+
+**Severity tally:** 2 Blocker (F-26, F-27), 18 Major, 12 Minor.
+**Disposition tally:** 13 fix, 7 defer, 4 accept, 8 route-forward (Phase 3: F-06/F-07/F-16/F-32; Phase 4: F-26/F-27/F-29/F-31; Phase 5: F-23/F-28).
+
+## AUDIT-03 — CLI-Surface Risk Assessment
+
+Focused, per-surface risk review of the three CLI surfaces in whole-repo read scope
+(D-11). Each surface's risks are captured as `F-NN` findings in the detail sections;
+this section is the synthesis the success criterion asks for.
+
+### Package CLI — `cli.py`
+
+- **Argument validation:** argparse-level only. `main` requires a subcommand
+  (`cli.py:22`), but the four `--rescore`-only flags (`--reuse-parser-options`,
+  `--use-prediction-cache`, `--pass-id`, and the rescore use of `--max-trials`) are
+  accepted on a plain `run` and silently ignored — only `--max-trials` even warns
+  (`cli.py:180-181`). There is no validation that a flag is meaningful for the chosen mode.
+- **Exit-code semantics:** `run` always returns `0` once a sweep completes
+  (`cli.py:167`); `--rescore` (`cli.py:214`) and `analyze` (`cli.py:256`) both return
+  `0 if succeeded == total else 1`, which conflates a real error with the presence of a
+  pre-existing failed trial — see **F-06**.
+- **Type exposure:** the `suite: object`/`Any` + `type: ignore` cluster (**F-01**) means
+  a renamed suite field fails at runtime *inside a CLI handler*, not at pyright time.
+- **Owning findings:** F-01, F-06 → **Phase 3** (documented exit codes + argument validation).
+
+### `CliToolAdapter` subprocess contract
+
+- **Output collection:** the `stdout_json` reverse-scan heuristic (**F-07**) can misread
+  a trailing JSON-looking line as the result payload — silent data corruption.
+- **Failure modes — covered:** a missing binary returns `success=False`,
+  `error="Tool entry not found"` (`cli_adapter.py:115-123`); a nonzero exit logs
+  stdout/stderr and returns `success=False`, `error="exit=N"` (`cli_adapter.py:127-140`).
+- **Failure modes — gaps:** there is **no timeout** on the `subprocess.run` call
+  (`cli_adapter.py:107-114`), so a hung tool stalls the whole sweep — see **F-32**; and
+  under `outputs_from: glob`, missing output files silently yield empty
+  `predictions`/`figures` (`cli_adapter.py:202-221`) rather than a flagged failure (the
+  missing-output half of the contract is folded into F-07/F-32's Phase 3 routing).
+- **Owning findings:** F-07, F-32 → **Phase 3** (the CLI-hardening contract explicitly
+  names nonzero exit, missing outputs, and timeout).
+
+### F2S3 `conda run` integration
+
+- **Env/binary assumptions:** the shipped entry is `conda run -n f2s3-dev312 f2s3`
+  (`f2s3.yaml:13`) with absolute scratch paths baked into `static_params` (`:29-30`) and
+  the hashed run-dir root (`:51`). A missing env, missing `conda`, or missing binary
+  surfaces only as a generic `FileNotFoundError` / nonzero exit (**F-16**) with no
+  pre-flight check or remediation hint, and the parser is never run against real F2S3
+  output in CI.
+- **Owning findings:** F-16 → **Phase 3** (F2S3 as the canonical `CliToolAdapter`
+  showcase + "how to obtain F2S3" note), with the packaging half in **Phase 4** (**F-29**).
 
 ## Detailed Findings
 
