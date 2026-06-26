@@ -75,7 +75,7 @@ None yet.
 
 | # | Description | Date | Commit | Directory |
 |---|-------------|------|--------|-----------|
-| 260626-jix | Create OVERVIEW.md one-pager for ETH open-source docs | 2026-06-26 | 7273891 | [260626-jix-create-overview-md-one-pager-for-eth-ope](./quick/260626-jix-create-overview-md-one-pager-for-eth-ope/) |
+| 260626-jix | Create OVERVIEW.md one-pager for ETH open-source docs | 2026-06-26 | 99d254c | [260626-jix-create-overview-md-one-pager-for-eth-ope](./quick/260626-jix-create-overview-md-one-pager-for-eth-ope/) |
 
 ## Deferred Items
 
