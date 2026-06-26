@@ -1,0 +1,21 @@
+# Command: conda run -n iof3d_cosicorr3d-dev312 vulture src/ --min-confidence 60
+# vulture 2.16  |  Python 3.12.12 (env iof3d_cosicorr3d-dev312)  |  2026-06-26T15:27:37Z
+# min-confidence=60 (moderate: surfaces actionable unused names, suppresses the noisiest low-confidence guesses)
+# A non-zero exit because dead code was FOUND is success, not failure.
+
+ERROR conda.cli.main_run:execute(142): `conda run vulture src/ --min-confidence 60` failed. (See above for error)
+src/geodispbench3d/dataset/schema.py:53: unused method 'scan_by_epoch' (60% confidence)
+src/geodispbench3d/dataset/schema.py:67: unused variable 'gt_kinds_supported' (60% confidence)
+src/geodispbench3d/suite/loader.py:30: unused variable 'parallel_trials' (60% confidence)
+src/geodispbench3d/suite/loader.py:31: unused variable 'override_tool_mode' (60% confidence)
+src/geodispbench3d/sweep/rescore.py:72: unused variable 'skipped_no_summary' (60% confidence)
+src/geodispbench3d/sweep/rescore.py:73: unused variable 'skipped_failed' (60% confidence)
+src/geodispbench3d/sweep/rescore.py:110: unused attribute 'skipped_no_summary' (60% confidence)
+src/geodispbench3d/sweep/rescore.py:118: unused attribute 'skipped_failed' (60% confidence)
+src/geodispbench3d/sweep/rescore.py:127: unused attribute 'skipped_failed' (60% confidence)
+src/geodispbench3d/sweep/trial_record.py:40: unused variable 'yaml_hash' (60% confidence)
+src/geodispbench3d/tool/base.py:81: unused variable 'in_process_safe' (60% confidence)
+src/geodispbench3d/tool/callable_adapter.py:42: unused variable 'in_process_safe' (60% confidence)
+src/geodispbench3d/tool/cli_adapter.py:75: unused variable 'in_process_safe' (60% confidence)
+src/geodispbench3d/tool/loader.py:44: unused variable 'outputs_options' (60% confidence)
+src/geodispbench3d_iof3d/adapter.py:42: unused variable 'in_process_safe' (60% confidence)

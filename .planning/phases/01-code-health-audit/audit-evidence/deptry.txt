@@ -1,0 +1,34 @@
+# Command: NO_COLOR=1 conda run -n iof3d_cosicorr3d-dev312 deptry . --known-first-party geodispbench3d
+#          (output piped through 'sed -r "s/\[[0-9;]*m//g"' to strip ANSI color escapes)
+# deptry 0.25.1  |  Python 3.12.12 (env iof3d_cosicorr3d-dev312)  |  2026-06-26T15:29:36Z
+# Scans the project root (src/ + tests/) against pyproject.toml for unused (DEP002),
+# missing (DEP001), transitive (DEP003), and misplaced-dev (DEP004) dependencies.
+# A non-zero exit because dependency issues were FOUND is success, not failure.
+#
+# WHY --known-first-party geodispbench3d: the package is editable-installed (src layout),
+# so deptry's dist-info scan treats every intra-package 'import geodispbench3d.*' as a
+# DEP003 'transitive dependency' (48 such false positives in the unfiltered run). Marking
+# the core package first-party removes that self-import noise so the genuine signal shows.
+#
+# READING THE RESULT: there are NO DEP001 (missing) findings — every third-party import in
+# src/ maps to a declared dependency. The DEP002 'unused' set is dev/dashboard/build tooling
+# (pytest, coverage, ruff, pyright, pre-commit, sphinx, duckdb) that is exercised in tests/CI/
+# the dashboard rather than imported in src/ — a scan-scope artefact, not a literal 'delete me'.
+
+Assuming the corresponding module name of package 'streamlit' is 'streamlit'. Install the package or configure a package_module_name_map entry to override this behaviour.
+Assuming the corresponding module name of package 'altair' is 'altair'. Install the package or configure a package_module_name_map entry to override this behaviour.
+Assuming the corresponding module name of package 'duckdb' is 'duckdb'. Install the package or configure a package_module_name_map entry to override this behaviour.
+Assuming the corresponding module name of package 'pyright' is 'pyright'. Install the package or configure a package_module_name_map entry to override this behaviour.
+Scanning 36 files...
+
+pyproject.toml: DEP002 'duckdb' defined as a dependency but not used in the codebase
+pyproject.toml: DEP002 'ruff' defined as a dependency but not used in the codebase
+pyproject.toml: DEP002 'pyright' defined as a dependency but not used in the codebase
+pyproject.toml: DEP002 'pre-commit' defined as a dependency but not used in the codebase
+pyproject.toml: DEP002 'pytest' defined as a dependency but not used in the codebase
+pyproject.toml: DEP002 'coverage' defined as a dependency but not used in the codebase
+pyproject.toml: DEP002 'sphinx' defined as a dependency but not used in the codebase
+Found 7 dependency issues.
+
+For more information, see the documentation: https://deptry.com/
+ERROR conda.cli.main_run:execute(142): `conda run deptry . --known-first-party geodispbench3d` failed. (See above for error)
