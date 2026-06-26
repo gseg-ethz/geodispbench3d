@@ -80,7 +80,33 @@ the deferred/route-forward findings stay out.
   the stable finding ID (D-03 from Phase 1) so history maps back to the audit table.
 - **D-08 (green gate — every wave):** `ruff` + `pyright` + the full `pytest` suite
   must pass at **every wave boundary** (not necessarily after each individual
-  commit). Intermediate commits within a wave may be transiently red.
+  commit). Intermediate commits within a wave may be transiently red. See D-11/D-12
+  for the operational definition of the pyright half of this gate.
+
+### Quality-gate operationalization (resolves RESEARCH A1 — decided 2026-06-27)
+- **D-11 (pyright gate = no-regression, not zero):** At HEAD pyright is RED
+  (21 errors / 9 warnings), and a chunk of those errors live in code Phase 2 does
+  **not** touch — F-14 (Ax shims, `runner.py:395/401`), F-12/F-15 (iof3D adapter),
+  and the dashboard, all dispositioned defer/route-forward. "pyright passes
+  (0 errors)" is therefore unsatisfiable in Phase 2 without pulling deferred work
+  in. The pyright half of D-08 is operationalized as: **(a) no NEW pyright errors
+  above the established HEAD baseline, AND (b) 0 errors on the lines Phase 2 actually
+  owns** (the touched regions of `cli.py`, `sweep/runner.py` non-shim,
+  `sweep/parameters.py`, `tool/loader.py`, `sweep/trial_record.py`,
+  `sweep/rescore.py`, `sweep/evaluation.py`, `results/store.py`,
+  `dataset/schema.py`). `ruff` and the full `pytest` suite remain strict
+  (0 problems / all 32 + new tests green, 0 skipped).
+- **D-12 (baseline is CI-faithful):** Wave 0 establishes the baseline by installing
+  the CI-pinned `pyright==1.1.392` with `.[dev]`-only resolution (matching
+  `.github/workflows/ci.yml`'s lint job) and recording the exact error count as the
+  floor — not the local `1.1.403` + full-extras superset. This matches the gate CI
+  will actually enforce at publish time.
+- **D-13 (mypy is a Phase 5 discussion, NOT decided here):** A proposal to demote
+  pyright to informative and add a strict `mypy` gate (with aligned CI workflows,
+  pchandler-style) is explicitly **deferred to Phase 5 (CI/CD) as an open question
+  to evaluate — pros/cons to be discussed there, not pre-locked.** No mypy work,
+  config, or dependency enters Phase 2. (CI workflow edits are already routed to
+  Phase 5 via F-23/F-28.)
 
 ### F-30 — declared-but-unread fields
 - **D-09 (guard the forward-compat fields, delete the rest):**

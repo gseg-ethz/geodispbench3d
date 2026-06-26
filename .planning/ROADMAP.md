@@ -108,6 +108,8 @@ Decimal phases appear between their surrounding integers in numeric order.
   3. A tagged release triggers OIDC trusted publishing to public PyPI — no stored long-lived tokens are used
   4. release-please is wired end-to-end so version bumps, changelog entries, and PyPI publishes flow automatically from a git tag
 
+**Open question for Phase 5 discussion (raised in Phase 2):** Type-checking strategy — keep `pyright` as the enforced CI type gate, or demote pyright to informative and adopt a strict `mypy` gate (pchandler-style), realigning the CI lint workflow accordingly. Pros/cons to be discussed here; **not pre-decided**. Carried from Phase 2's "pyright is RED at HEAD" finding — see `.planning/phases/02-targeted-fixes/02-RESEARCH.md` Assumption A1 and Phase 2 CONTEXT.md D-13.
+
 **Plans**: TBD
 
 ## Progress
