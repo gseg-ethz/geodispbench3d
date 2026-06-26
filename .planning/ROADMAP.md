@@ -38,7 +38,7 @@ Decimal phases appear between their surrounding integers in numeric order.
   3. The three CLI surfaces (`cli.py`, `CliToolAdapter`, F2S3 `conda-run`) each have a focused risk assessment in the report
   4. Every finding carries a severity rating and one of: fix / defer / accept
 
-**Plans**: 2 plans
+**Plans**: 0/2 plans executed
 **Wave 1**
 
 - [ ] 01-01-PLAN.md — Run the locked detector set (vulture/coverage/deptry/radon) via the conda env, capture reproducible evidence, and distill EVIDENCE.md
@@ -116,7 +116,7 @@ Decimal phases appear between their surrounding integers in numeric order.
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
-| 1. Code-Health Audit | 0/? | Not started | - |
+| 1. Code-Health Audit | 0/2 | Planned    |  |
 | 2. Targeted Fixes | 0/? | Not started | - |
 | 3. CLI Hardening | 0/? | Not started | - |
 | 4. Licensing, Metadata & Packaging | 0/? | Not started | - |
