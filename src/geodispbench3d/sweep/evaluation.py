@@ -39,7 +39,7 @@ class EvaluationOutput:
     flat list of dicts ready to append to a parquet file. ``prediction``
     is the raw phase-2 output from the parser (or ``None`` when the trial
     skipped phase 2 entirely); the runner caches it to disk so future
-    ``--rescore`` and ``analyze`` passes can reuse it without re-running
+    the ``rescore`` and ``analyze`` passes can reuse it without re-running
     the parser.
 
     ``non_fatal_failures`` counts the swallowed (fail-soft) failures inside this

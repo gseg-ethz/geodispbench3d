@@ -172,7 +172,9 @@ def test_cli_analyze_emits_non_fatal_failures_line(
     corrupt_dir.mkdir(parents=True, exist_ok=True)
     (corrupt_dir / "corrupt-run.json").write_text("{ not valid json", encoding="utf-8")
 
-    args = argparse.Namespace(analysis=str(analysis_yaml), pass_id=None, log_level="INFO")
+    args = argparse.Namespace(
+        analysis=str(analysis_yaml), pass_id=None, log_level="INFO", traceback=False
+    )
     with caplog.at_level(logging.INFO, logger="geodispbench3d.cli"):
         cli._cmd_analyze(args)
 

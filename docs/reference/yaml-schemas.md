@@ -12,9 +12,20 @@ kind: cli | python_callable | callable | custom | factory   # required
 
 entry: <string>                       # required (semantics depend on kind)
 
+remediation: <string>                 # optional; operator guidance appended to a
+                                      #   ToolPreflightError when the env/binary
+                                      #   can't be resolved before trial 0
+help_url: <string>                    # optional; reference URL appended to the
+                                      #   same preflight error
+
 execution:
   mode: subprocess | in_process       # informational; semantics live in adapter
   in_process_safe: <bool>
+  timeout_seconds: <number>           # optional, opt-in per-trial wall-clock cap;
+                                      #   unset or <= 0 = no timeout. Distinct from
+                                      #   the suite-level execution block. On expiry
+                                      #   the tool process tree is killed and the
+                                      #   trial is recorded as a timeout failure.
 
 # --- kind: cli ---
 invocation:
@@ -46,7 +57,10 @@ hyperparameters:
 
 # Where to find / how to interpret outputs
 outputs:
-  from: stdout_json | glob | fixed_path
+  from: glob                          # blessed mode, default when unset.
+                                      #   stdout_json is DEPRECATED (explicit use
+                                      #   raises at load); fixed_path is removed —
+                                      #   use glob with a predictions_glob.
   run_dir_root: <path>                # for non-hashed flat layouts
   hashed_run_dir:
     root: <path>
@@ -154,11 +168,31 @@ Absolute paths are honored everywhere.
 ```
 geodispbench3d run <suite.yaml>
   [--max-trials N]                    # cap trials regardless of suite
+  [--timeout SECONDS]                 # float; overrides tool execution.timeout_seconds
   [--log-level LEVEL]                 # DEBUG | INFO | WARNING | ERROR
+  [--traceback]                       # re-raise the original exception with full stack
+
+geodispbench3d rescore <suite.yaml>   # own subcommand (was: run --rescore)
+  [--reuse-parser-options]            # use the parser config recorded in summary.json
+  [--use-prediction-cache]            # skip phase 2 on a predictions-cache hit
+  [--pass-id ID]                      # tag this rescore pass in the parquet
+  [--max-trials N]                    # warn-and-ignored in rescore mode
+  [--log-level LEVEL]
+  [--traceback]
+
+geodispbench3d analyze <analysis.yaml>
+  [--pass-id ID]
+  [--log-level LEVEL]
+  [--traceback]
 
 geodispbench3d dashboard
   [--parquet PATH]                    # default: $GEODISPBENCH3D_PARQUET
                                       #          or ./outputs/results.parquet
 
 geodispbench3d list-metrics <metrics.yaml>
+  [--traceback]
 ```
+
+Exit codes: `0` success, `1` runtime/config/preflight failure (or a
+zero-success sweep), `2` argparse usage error. See
+[Integrating a CLI tool → Package CLI exit codes](../integrating/cli-tool.md#package-cli-exit-codes).

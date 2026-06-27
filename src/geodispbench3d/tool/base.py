@@ -54,6 +54,40 @@ class TrialResult:
     duration_seconds: float
     success: bool = True
     error: str | None = None
+    #: Explicit, testable failure-kind signal set by the adapter on every
+    #: ``success=False`` branch — ``"timeout"`` | ``"nonzero_exit"`` |
+    #: ``"missing_output"`` | ``"entry_not_found"``. The runner classifies on
+    #: this rather than substring-matching the human-readable ``error``.
+    error_kind: str | None = None
+
+
+class ToolPreflightError(Exception):
+    """Raised by an adapter's :meth:`ToolAdapter.prepare` when the tool cannot
+    be invoked at all (missing executable, missing/unresolvable conda env).
+
+    Carries optional operator-facing ``remediation`` guidance and a ``help_url``
+    (both keyword-only). ``str()`` appends them when present so the surfaced
+    message is actionable instead of a bare ``FileNotFoundError`` at trial 0.
+    """
+
+    def __init__(
+        self,
+        message: str,
+        *,
+        remediation: str | None = None,
+        help_url: str | None = None,
+    ) -> None:
+        super().__init__(message)
+        self.remediation = remediation
+        self.help_url = help_url
+
+    def __str__(self) -> str:
+        parts = [super().__str__()]
+        if self.remediation:
+            parts.append(f"Remediation: {self.remediation}")
+        if self.help_url:
+            parts.append(f"See: {self.help_url}")
+        return "\n".join(parts)
 
 
 class ToolAdapter(ABC):
@@ -93,6 +127,7 @@ class ToolAdapter(ABC):
 
 __all__ = [
     "ToolAdapter",
+    "ToolPreflightError",
     "TrialRequest",
     "TrialResult",
     "TrialOutputs",

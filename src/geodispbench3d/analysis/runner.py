@@ -39,6 +39,12 @@ class AnalysisSummary:
     ``non_fatal_failures`` totals the swallowed fail-soft failures across the
     pass (corrupt prediction reads, per-prediction evaluation skips), surfaced
     as the CLI's aggregate "N non-fatal failures" line (F-08).
+
+    ``eval_failures`` (03-01) is the genuine-parser/metric subset — the
+    ``"evaluation"`` diag kind (both the raise-case skip and the inner
+    evaluation non-fatals) — which Plan 02 reads for the analyze exit-1
+    condition. ``skipped_unreadable`` stays a genuine data error and
+    ``skipped_no_case`` stays a benign skip.
     """
 
     total: int = 0
@@ -47,6 +53,7 @@ class AnalysisSummary:
     skipped_no_case: int = 0
     rows_emitted: int = 0
     non_fatal_failures: int = 0
+    eval_failures: int = 0
 
 
 def analyze(
@@ -139,6 +146,7 @@ def analyze(
         summary.succeeded += 1
 
     summary.non_fatal_failures = diag.non_fatal_failures
+    summary.eval_failures = diag.by_kind.get("evaluation", 0)
     log.info(
         "analyze done: succeeded=%d total=%d unreadable=%d no_case=%d rows=%d "
         "non_fatal_failures=%d",
