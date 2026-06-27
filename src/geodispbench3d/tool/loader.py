@@ -129,14 +129,42 @@ def _build_cli_adapter(raw: Mapping[str, Any], yaml_path: Path) -> CliToolAdapte
             extra_inputs=tuple(hashed_raw.get("extra_inputs") or ()),
         )
 
+    # Output-collection contract (D-06): ``glob`` is the single blessed path.
+    # Read the RAW value BEFORE defaulting so an unset block defaults to glob
+    # while an *explicitly* set ``stdout_json`` (deprecated) or an unsupported
+    # value is rejected at load with an actionable message.
+    outputs_from_raw = outputs_raw.get("from")
+    if outputs_from_raw is None:
+        outputs_from = "glob"
+    elif outputs_from_raw == "glob":
+        outputs_from = "glob"
+    elif outputs_from_raw == "stdout_json":
+        raise ValueError(
+            f"tool.yaml at {yaml_path}: outputs.from: stdout_json is no longer "
+            "supported; use outputs.from: glob with a predictions_glob"
+        )
+    else:
+        raise ValueError(
+            f"tool.yaml at {yaml_path}: unsupported outputs.from value "
+            f"{outputs_from_raw!r}; the only supported value is 'glob'"
+        )
+
+    # Opt-in per-trial timeout (D-04/F-32): read the TOOL-level execution block
+    # (NOT suite.execution / ExecutionConfig — RESEARCH Pitfall 5). Unset leaves
+    # the timeout disabled.
+    execution_raw = raw.get("execution") or {}
+    timeout_seconds = execution_raw.get("timeout_seconds")
+    timeout = float(timeout_seconds) if timeout_seconds is not None else None
+
     return CliToolAdapter(
         invocation=spec,
-        outputs_from=str(outputs_raw.get("from", "stdout_json")),
+        outputs_from=outputs_from,
         run_dir_root=run_dir_root,
         hashed_run_dir=hashed_spec,
         predictions_glob=outputs_raw.get("predictions_glob"),
         figures_glob=outputs_raw.get("figures_glob"),
         env=outputs_raw.get("env"),
+        timeout=timeout,
     )
 
 

@@ -54,6 +54,11 @@ class TrialResult:
     duration_seconds: float
     success: bool = True
     error: str | None = None
+    #: Explicit, testable failure-kind signal set by the adapter on every
+    #: ``success=False`` branch — ``"timeout"`` | ``"nonzero_exit"`` |
+    #: ``"missing_output"`` | ``"entry_not_found"``. The runner classifies on
+    #: this rather than substring-matching the human-readable ``error``.
+    error_kind: str | None = None
 
 
 class ToolAdapter(ABC):

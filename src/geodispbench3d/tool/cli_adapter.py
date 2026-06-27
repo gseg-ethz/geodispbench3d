@@ -19,7 +19,9 @@ from __future__ import annotations
 import hashlib
 import json
 import logging
+import os
 import shlex
+import signal
 import subprocess
 import time
 from collections.abc import Mapping, Sequence
@@ -78,12 +80,13 @@ class CliToolAdapter(ToolAdapter):
         self,
         *,
         invocation: CliInvocationSpec,
-        outputs_from: str = "stdout_json",
+        outputs_from: str = "glob",
         run_dir_root: Path | None = None,
         hashed_run_dir: HashedRunDirSpec | None = None,
         predictions_glob: str | None = None,
         figures_glob: str | None = None,
         env: Mapping[str, str] | None = None,
+        timeout: float | None = None,
         logger: logging.Logger | None = None,
     ) -> None:
         self._invocation = invocation
@@ -93,7 +96,18 @@ class CliToolAdapter(ToolAdapter):
         self._predictions_glob = predictions_glob
         self._figures_glob = figures_glob
         self._env = dict(env) if env else None
+        # ``None`` or any value ``<= 0`` means "no timeout" (opt-in, D-04).
+        self._timeout = timeout
         self._logger = logger or logging.getLogger("geodispbench3d.tool.cli")
+
+    def set_timeout_override(self, timeout: float | None) -> None:
+        """Public seam for overriding the per-trial timeout (e.g. a CLI flag).
+
+        Plan 02 uses this instead of mutating the private ``_timeout`` field.
+        ``None`` or any value ``<= 0`` disables the timeout.
+        """
+
+        self._timeout = timeout
 
     def run_trial(self, request: TrialRequest) -> TrialResult:
         run_dir = self._resolve_run_dir(request)
@@ -103,14 +117,23 @@ class CliToolAdapter(ToolAdapter):
         argv = self._build_argv(request, run_dir)
         self._logger.info("CLI trial: %s", " ".join(shlex.quote(a) for a in argv))
 
+        timeout = self._timeout if (self._timeout is not None and self._timeout > 0) else None
+
         start = time.perf_counter()
         try:
-            proc = subprocess.run(
+            # ``start_new_session=True`` puts the tool (and any descendants it
+            # spawns, e.g. the real binary under ``conda run``) in its own
+            # process group so a timeout can reap the whole tree, not just the
+            # direct child. ``Popen`` + ``communicate`` preserves every guarantee
+            # the prior ``subprocess.run`` call gave: piped+captured text output
+            # and the adapter's custom environment.
+            proc = subprocess.Popen(
                 argv,
-                capture_output=True,
+                stdout=subprocess.PIPE,
+                stderr=subprocess.PIPE,
                 text=True,
                 env=self._env,
-                check=False,
+                start_new_session=True,
             )
         except FileNotFoundError as exc:
             duration = time.perf_counter() - start
@@ -120,26 +143,63 @@ class CliToolAdapter(ToolAdapter):
                 duration_seconds=duration,
                 success=False,
                 error=f"Tool entry not found: {exc}",
+                error_kind="entry_not_found",
             )
 
-        duration = time.perf_counter() - start
-
-        if proc.returncode != 0:
-            self._logger.error(
-                "CLI trial returned %s\nstdout:\n%s\nstderr:\n%s",
-                proc.returncode,
-                proc.stdout,
-                proc.stderr,
+        try:
+            stdout, stderr = proc.communicate(timeout=timeout)
+        except subprocess.TimeoutExpired:
+            # Kill the whole process group (incl. conda-run descendants) so a
+            # hung tool cannot stall the sweep or orphan a GPU job, then reap.
+            self._terminate_process_tree(proc)
+            stdout, stderr = proc.communicate()
+            duration = time.perf_counter() - start
+            self._logger.warning(
+                "CLI trial timed out after %ss: %s", self._timeout, argv[0]
             )
             return TrialResult(
                 outputs=TrialOutputs(run_dir=run_dir or self._run_dir_root or Path.cwd()),
                 scalar_metrics={"runtime_seconds": duration},
                 duration_seconds=duration,
                 success=False,
-                error=f"exit={proc.returncode}",
+                error="timeout",
+                error_kind="timeout",
             )
 
-        outputs, scalar_metrics = self._collect_outputs(proc.stdout, run_dir)
+        duration = time.perf_counter() - start
+        returncode = proc.returncode
+
+        if returncode != 0:
+            self._logger.error(
+                "CLI trial returned %s\nstdout:\n%s\nstderr:\n%s",
+                returncode,
+                stdout,
+                stderr,
+            )
+            return TrialResult(
+                outputs=TrialOutputs(run_dir=run_dir or self._run_dir_root or Path.cwd()),
+                scalar_metrics={"runtime_seconds": duration},
+                duration_seconds=duration,
+                success=False,
+                error=f"exit={returncode}",
+                error_kind="nonzero_exit",
+            )
+
+        outputs, scalar_metrics = self._collect_outputs(stdout, run_dir)
+
+        # D-07: a configured ``predictions_glob`` matching zero files is a
+        # flagged failure — the tool exited 0 but produced no usable output.
+        # An empty ``figures_glob`` stays non-fatal (figures are optional).
+        if self._predictions_glob and not outputs.predictions:
+            return TrialResult(
+                outputs=outputs,
+                scalar_metrics={"runtime_seconds": duration},
+                duration_seconds=duration,
+                success=False,
+                error=f"no predictions matched glob {self._predictions_glob!r}",
+                error_kind="missing_output",
+            )
+
         metrics = dict(scalar_metrics)
         metrics.setdefault("runtime_seconds", duration)
         return TrialResult(
@@ -150,6 +210,26 @@ class CliToolAdapter(ToolAdapter):
         )
 
     # ------------------------------------------------------------------
+
+    def _terminate_process_tree(self, proc: subprocess.Popen[str]) -> None:
+        """Kill a timed-out subprocess and its descendants; never raise.
+
+        On POSIX the child runs in its own session/process group (set via
+        ``start_new_session=True``), so killing the whole group reaps
+        descendants spawned via ``conda run`` — a direct ``proc.kill()`` would
+        leave the real tool orphaned. On non-POSIX, fall back to ``proc.kill()``.
+        A ``ProcessLookupError`` (the group/process already exited between the
+        timeout and the kill) is swallowed and treated as already-dead; the
+        termination path must never raise out of ``run_trial``.
+        """
+
+        try:
+            if os.name == "posix":
+                os.killpg(os.getpgid(proc.pid), signal.SIGKILL)
+            else:  # pragma: no cover - non-POSIX fallback
+                proc.kill()
+        except ProcessLookupError:  # pragma: no cover - benign kill/exit race
+            pass
 
     def _resolve_run_dir(self, request: TrialRequest) -> Path | None:
         """Return the per-trial run directory, hashed if configured."""

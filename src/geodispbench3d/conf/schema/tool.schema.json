@@ -12,7 +12,11 @@
       "type": "object",
       "properties": {
         "mode": {"enum": ["subprocess", "in_process"], "default": "subprocess"},
-        "in_process_safe": {"type": "boolean", "default": false}
+        "in_process_safe": {"type": "boolean", "default": false},
+        "timeout_seconds": {
+          "type": "number",
+          "description": "Optional per-trial wall-clock timeout (seconds). Unset or <= 0 disables the timeout. On expiry the tool process tree is killed and the trial is recorded as a timeout failure."
+        }
       }
     },
     "invocation": {
@@ -45,7 +49,11 @@
     "outputs": {
       "type": "object",
       "properties": {
-        "from": {"enum": ["stdout_json", "glob", "fixed_path"]},
+        "from": {
+          "enum": ["glob", "stdout_json"],
+          "default": "glob",
+          "description": "Output-collection mode. 'glob' is the single blessed path (default when unset). 'stdout_json' is deprecated and rejected at load — migrate to 'glob' with a predictions_glob."
+        },
         "run_dir_root": {"type": "string"},
         "predictions_glob": {"type": "string"},
         "figures_glob": {"type": "string"}

@@ -15,6 +15,11 @@ entry: conda run -n f2s3-dev312 f2s3
 execution:
   mode: subprocess
   in_process_safe: false
+  # Optional opt-in per-trial wall-clock timeout (seconds). Left UNSET on
+  # purpose: F2S3 sweeps can legitimately run for many hours, and D-04 makes the
+  # timeout opt-in rather than shipping a default ceiling. On expiry the whole
+  # `conda run` process tree is killed and the trial is recorded as a timeout.
+  # timeout_seconds: 7200
 
 invocation:
   style: argparse
