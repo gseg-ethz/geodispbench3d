@@ -64,7 +64,7 @@ Decimal phases appear between their surrounding integers in numeric order.
 **Wave 0** *(test net + pyright baseline — D-04 tests-first)*
 
 - [ ] 02-01-PLAN.md — F-20 runner.py characterization net (fake AxClient + stub adapter; the regression anchor)
-- [ ] 02-02-PLAN.md — F-21 store + F-22 evaluation failure-path tests + CI-faithful pyright baseline
+- [ ] 02-02-PLAN.md — F-21 store + F-22 evaluation failure-path tests + pyright baseline & reusable baseline-diff gate (pyright_gate.py)
 
 **Wave 1** *(blocked on Wave 0)*
 
@@ -73,7 +73,7 @@ Decimal phases appear between their surrounding integers in numeric order.
 
 **Wave 2** *(blocked on 02-03)*
 
-- [ ] 02-05-PLAN.md — F-08 narrowed excepts + warning + non-fatal counter + CLI summary line
+- [ ] 02-05-PLAN.md — F-08 narrowed excepts + typed PassDiagnostics + non_fatal_failures on every summary + CLI summary line
 
 **Wave 3** *(blocked on 02-05)*
 
