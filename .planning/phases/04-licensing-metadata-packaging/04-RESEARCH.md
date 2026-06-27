@@ -555,26 +555,28 @@ public state (PKG-01) — handled by the guard, not a blocker.
 | A3 | `SphereFilter.sample()` (inherited) is unchanged in 2.1.0 vs the dev lineage | Focus 2 | Low — constructor + core API verified in 2.1.0 wheel; the fresh-venv `pytest tests/f2s3` gate confirms end-to-end |
 | A4 | Commenting the whole `iof3d = [...]` block (vs `iof3d = []`) is the intended reading of D-03 "commented out" | Focus 4 | Low — CONTEXT says "commented out"; empty-list would silently accept the extra then fail to install iof3D |
 
-## Open Questions
+## Open Questions (RESOLVED)
 
-1. **README `[iof3d]` install instructions vs the commented extra**
-   - What we know: `README.md:23–27` advertises `pip install 'geodispbench3d[iof3d]'`; README is the
-     PyPI long-description; D-03 comments the extra out so that command errors publicly.
-   - What's unclear: CONTEXT D-08 only locks the License-line README edit; the install-section note is
-     not explicitly decided.
-   - Recommendation: add a one-line note ("the `[iof3d]` extra is unavailable until iof3D is published;
-     ~6 months") near the iof3d install snippet. Treat as recommended, surface to the user in planning.
+> All three resolved during the 2026-06-27 planning session (session decisions 1 & 2); each is
+> implemented or deliberately deferred in the Phase 4 plans. No genuine unknown remains.
 
-2. **Whether to also update `tests/f2s3/conftest.py:17` skip message**
-   - What we know: it still credits pchandler to the `[iof3d]` extra "once F2S3 ships pchandler" — now
-     satisfied by D-05.
-   - Recommendation: update to reference `[f2s3]` directly. Trivial, same wave as the extra edit.
+1. **README `[iof3d]` install instructions vs the commented extra** — **RESOLVED (session decision 1):**
+   add a one-line note that the `[iof3d]` extra is currently unavailable until iof3D is published
+   publicly, **with NO specific timeline** (no "~6 months"/dates). Implemented in Plan 01 Task 3 and
+   guarded by a RED-first test asserting no time horizon leaks.
+   - Original framing: `README.md:23–27` advertises `pip install 'geodispbench3d[iof3d]'`; README is
+     the PyPI long-description; D-03 comments the extra out so that command errors publicly. CONTEXT
+     D-08 only locked the License-line README edit.
 
-3. **PKG-03 runtime gate placement (Phase 4 vs deferred to Phase 5 CI)**
-   - What we know: symbol/API verification is complete; only the fresh-venv `pchandler==2.1.0` run
-     remains, and CI's `f2s3` job (Phase 5) will install `.[f2s3,dev]` from PyPI.
-   - Recommendation: do a manual fresh-venv checkpoint in Phase 4 for confidence; rely on the Phase 5
-     CI job for the standing gate. Flag for the planner whether to add it as a Phase-4 checkpoint task.
+2. **Whether to also update `tests/f2s3/conftest.py:17` skip message** — **RESOLVED:** yes — update to
+   reference the `[f2s3]` extra directly (it still credits pchandler to `[iof3d]`, now satisfied by
+   D-05). Implemented in Plan 02 Task 3, same wave as the extra edit.
+
+3. **PKG-03 runtime gate placement (Phase 4 vs deferred to Phase 5 CI)** — **RESOLVED (session
+   decision 2): deferred to Phase 5 CI.** Symbol/API verification against the 2.1.0 wheel is complete;
+   the fresh-venv `pchandler==2.1.0` resolution + `pytest tests/f2s3` run lands in Phase 5's already
+   enabled CI `f2s3` job. Phase 4 delivers the `~= 2.1` pin, the recorded symbol-compat confirmation,
+   and the corrected conftest message — no Phase-4 fresh-venv checkpoint task.
 
 ## Sources
 
