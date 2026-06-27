@@ -596,3 +596,60 @@ def test_cli_sweep_emits_non_fatal_failures_line(
     assert any(
         "non-fatal failures" in r.getMessage() and "3" in r.getMessage() for r in caplog.records
     ), [r.getMessage() for r in caplog.records]
+
+
+# ---------------------------------------------------------------------------
+# F-03: parser_fn_repr is single-sourced in trial_record.py and renders a
+# byte-identical "module:qualname" key. The __qualname__-dependent rendering
+# is locked for a module-level function, a class method, AND a nested/local
+# closure (whose __qualname__ carries a dotted "<locals>" path), so the
+# provenance/cache key cannot drift between the sweep runner and rescore.
+# ---------------------------------------------------------------------------
+
+
+def _module_level_parser() -> None:  # pragma: no cover - identity probe only
+    return None
+
+
+class _ParserHost:
+    def method_parser(self) -> None:  # pragma: no cover - identity probe only
+        return None
+
+
+def test_parser_fn_repr_byte_identical_across_callable_shapes() -> None:
+    """The shared renderer locks "module:qualname" for all callable shapes (F-03)."""
+
+    from geodispbench3d.sweep.trial_record import parser_fn_repr
+
+    mod = _module_level_parser.__module__
+
+    # (a) module-level function
+    assert parser_fn_repr(_module_level_parser) == f"{mod}:_module_level_parser"
+
+    # (b) class method — __qualname__ carries the class prefix
+    assert parser_fn_repr(_ParserHost.method_parser) == f"{mod}:_ParserHost.method_parser"
+
+    # (c) nested/local closure — __qualname__ carries a dotted "<locals>" path,
+    #     proving the renderer uses __qualname__ (not __name__).
+    def nested_parser() -> None:  # pragma: no cover - identity probe only
+        return None
+
+    rendered = parser_fn_repr(nested_parser)
+    assert rendered is not None
+    assert "<locals>" in rendered
+    assert rendered.endswith(":" + nested_parser.__qualname__)
+    assert rendered == f"{mod}:{nested_parser.__qualname__}"
+
+    # None short-circuits to None.
+    assert parser_fn_repr(None) is None
+
+
+def test_parser_fn_repr_single_source_imported_by_runner_and_rescore() -> None:
+    """runner.py and rescore.py reference the one shared trial_record symbol (F-03)."""
+
+    from geodispbench3d.sweep import rescore as rescore_mod
+    from geodispbench3d.sweep import runner as runner_module
+    from geodispbench3d.sweep.trial_record import parser_fn_repr
+
+    assert runner_module.parser_fn_repr is parser_fn_repr
+    assert rescore_mod.parser_fn_repr is parser_fn_repr
