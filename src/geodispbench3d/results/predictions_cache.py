@@ -176,9 +176,17 @@ def _safe_segment(value: str) -> str:
     The cache layout is rooted under a user-controlled directory; we
     don't want a tool_id like "../../etc" to break out. Replace anything
     that isn't ascii alphanumerics, underscore, dash, or dot.
+
+    Embedded separators in ``"../../etc"`` are neutralised by the char filter
+    (``/`` -> ``_``), but a segment whose *entire* value is a path special
+    (``""``, ``"."``, ``".."``) survives the filter verbatim and would still
+    climb out of the root, so it is explicitly prefixed with ``_``.
     """
 
-    return "".join(ch if (ch.isalnum() or ch in "._-") else "_" for ch in str(value))
+    cleaned = "".join(ch if (ch.isalnum() or ch in "._-") else "_" for ch in str(value))
+    if cleaned in {"", ".", ".."}:
+        return "_" + cleaned  # ".." -> "_.." ; "." -> "_." ; "" -> "_"
+    return cleaned
 
 
 def _to_jsonable(obj: Any) -> Any:

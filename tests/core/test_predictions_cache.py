@@ -95,3 +95,24 @@ def test_unsafe_segments_are_sanitised(tmp_path: Path) -> None:
     assert tmp_path in out.parents
     # The dot path got replaced; the file lives under tmp_path/<sanitised>/x/y/z.json
     assert ".." not in out.parts
+
+
+def test_whole_segment_path_specials_are_neutralised(tmp_path: Path) -> None:
+    """A segment whose entire value is ``..`` / ``.`` must not climb out of the
+    cache root (WR-02). The char filter alone preserves these verbatim, so they
+    are explicitly prefixed with ``_``."""
+
+    for special in ("..", "."):
+        out = cache_path(
+            tmp_path,
+            tool_id=special,
+            dataset_id="x",
+            case="y",
+            run_hash="z",
+        )
+        # No path-special component survives, so the file stays under the root.
+        assert ".." not in out.parts
+        assert "." not in out.parts
+        resolved_root = tmp_path.resolve()
+        assert resolved_root in out.resolve().parents
+        assert out.resolve().is_relative_to(resolved_root)
