@@ -34,6 +34,8 @@ comes before the cleanup, and the cleanup comes before the release.
 - ✓ Provenance-first persistence: parquet results store, predictions cache, per-run `summary.json` — existing
 - ✓ Streamlit results dashboard — existing
 - ✓ Quality tooling in place: pytest suites (core/iof3d/f2s3), ruff, pyright, pre-commit, release-please — existing
+- ✓ Licensing reconciled for public release (README ↔ pyproject/LICENSE/CITATION.cff all BSD-3-Clause), `Private :: Do Not Upload` classifier dropped, public metadata + Documentation/Changelog URLs added — Validated in Phase 4
+- ✓ Packaging deps untangled: `iof3d` extra commented out, F2S3 path resolves `pchandler ~= 2.1` standalone (confirmed pchandler 2.1.0 live on PyPI), `geodispbench3d_iof3d` ships dormant via PEP 562 import guard — Validated in Phase 4
 
 ### Active
 
@@ -42,8 +44,6 @@ comes before the cleanup, and the cleanup comes before the release.
 - [ ] Code-health audit producing a written findings report (bloat, dead code, the flagged anti-patterns, CLI risk areas)
 - [ ] Resolve audit findings — de-bloat and fixes scoped *from* the report, not pre-committed
 - [ ] Harden the three CLI-based workflow surfaces: package CLI (`cli.py`), `CliToolAdapter`, and the F2S3 `conda-run` subprocess integration; showcase F2S3 as the canonical `CliToolAdapter` example
-- [ ] Reconcile licensing for public release (README ↔ pyproject/LICENSE, already BSD-3-Clause), drop the `Private :: Do Not Upload` classifier, polish metadata
-- [ ] Untangle packaging deps: comment out the `iof3d` extra (iof3D stays private), make the F2S3 path resolve `pchandler` without it, and verify `pchandler` against its newly-published PyPI release
 - [ ] CI/CD: lint + type + test gates, build (wheel + sdist), and trusted-publishing release automation to public PyPI
 - [ ] Wire internal plan reviews through the codex CLI
 
@@ -83,10 +83,10 @@ comes before the cleanup, and the cleanup comes before the release.
 | Branching = `develop` + phase branches; `main` PRs only at milestone, `.planning/` stripped via clean PR | Keep `main` clean and release-only | — Pending |
 | Internal plan reviews via codex CLI | Cross-AI review to harden plans before execution | — Pending |
 | License = BSD-3-Clause (already in `pyproject` + `LICENSE`); reconcile README + drop `Private` classifier | No fresh license choice needed | ✓ Resolved |
-| iof3D stays private → comment out the `iof3d` extra for public release | iof3D not publishable at go-live | — Pending |
+| iof3D stays private → comment out the `iof3d` extra for public release | iof3D not publishable at go-live | ✓ Resolved (Phase 4) |
 | OPEN: F2S3 binary in-env vs subprocess/`conda-run` | Decided in the CLI/packaging phase; subprocess favours the CLI-adapter showcase | — Pending |
-| OPEN: resolve `pchandler` for F2S3 via the `f2s3` extra vs a `pchandler`-free example parser | Decided in the packaging phase | — Pending |
-| OPEN: ship `geodispbench3d_iof3d` + `iof3d-ax` script in the public distribution, or exclude | Decided in the packaging phase | — Pending |
+| resolve `pchandler` for F2S3 via the `f2s3` extra (`pchandler ~= 2.1`) | F2S3 stays fully runnable standalone; pchandler 2.1.0 confirmed non-breaking on PyPI | ✓ Resolved (Phase 4) |
+| ship `geodispbench3d_iof3d` + `iof3d-ax` dormant in the public single wheel (PEP 562 guard + graceful launcher) | One wheel, import succeeds without iof3D, clear error on adapter construction | ✓ Resolved (Phase 4) |
 | If F2S3 not bundled in-env → document how to obtain/install it (from gseg-ethz F2S3 repo) | Users need a path to run the F2S3 example | — Pending |
 
 ## Evolution
@@ -107,4 +107,4 @@ This document evolves at phase transitions and milestone boundaries.
 4. Update Context with current state
 
 ---
-*Last updated: 2026-06-26 after initialization*
+*Last updated: 2026-06-27 after Phase 4 (Licensing, Metadata & Packaging) completion — licensing reconciled, packaging deps untangled, dormant iof3D guard shipped. Next: Phase 5 (CI/CD & Release).*
