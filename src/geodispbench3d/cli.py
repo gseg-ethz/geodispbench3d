@@ -21,7 +21,7 @@ import argparse
 import logging
 import sys
 from pathlib import Path
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, TypeVar
 
 if TYPE_CHECKING:
     from collections.abc import Callable, Mapping, Sequence
@@ -32,6 +32,35 @@ if TYPE_CHECKING:
     # The optional results sink: ResultsStore.append, or None when no parquet
     # path is configured. Matches rescore_suite / run_with_suite's parameter.
     OnRecordRows = Callable[[Sequence[Mapping[str, Any]]], None] | None
+
+_T = TypeVar("_T")
+
+
+class _CleanExit(Exception):
+    """Internal sentinel: a config-load error has already been flattened to a
+    one-line ``error: <msg>`` on stderr. ``main()`` translates this to exit code
+    1 without re-printing. Never escapes the module."""
+
+
+def _load_or_clean_exit(
+    loader: Callable[..., _T], *loader_args: object, traceback: bool
+) -> _T:
+    """Run a config loader, flattening loader errors to ``error: <msg>`` + exit 1.
+
+    The protected region is EXACTLY the loader call (review MEDIUM): only a
+    ``FileNotFoundError`` / ``ValueError`` raised BY THE LOADER is caught here, so
+    a runtime ``ValueError`` later raised by Ax / a metric callable / persistence
+    is OUTSIDE this region and keeps its full traceback. With ``traceback`` set,
+    the original exception is re-raised so developers get the stack (D-10/D-11).
+    """
+
+    try:
+        return loader(*loader_args)
+    except (FileNotFoundError, ValueError) as exc:
+        if traceback:
+            raise
+        print(f"error: {exc}", file=sys.stderr)
+        raise _CleanExit from exc
 
 
 def main(argv: list[str] | None = None) -> int:
@@ -146,16 +175,36 @@ def main(argv: list[str] | None = None) -> int:
 
     args = parser.parse_args(argv)
 
-    if args.command == "run":
-        return _cmd_run(args)
-    if args.command == "rescore":
-        return _cmd_rescore(args)
-    if args.command == "analyze":
-        return _cmd_analyze(args)
-    if args.command == "dashboard":
-        return _cmd_dashboard(args)
-    if args.command == "list-metrics":
-        return _cmd_list_metrics(args)
+    from geodispbench3d.tool.base import ToolPreflightError
+
+    # NARROW clean-error boundary (D-10/D-11, review MEDIUM). Only two things are
+    # flattened to a one-line ``error: <msg>`` + exit 1 here:
+    #   * _CleanExit — raised by _load_or_clean_exit, which guards ONLY the
+    #     config-loader calls; the clean message is already printed there.
+    #   * ToolPreflightError — a DISTINCT type (cannot be confused with a runtime
+    #     ValueError), so it is safe to catch at this dispatch boundary even though
+    #     adapter.prepare() runs deep inside run_with_suite.
+    # An UNEXPECTED runtime ValueError raised by Ax / a metric / persistence is
+    # NOT caught here and propagates with its full traceback. argparse usage
+    # errors already exited 2 above (we never swallow its SystemExit).
+    try:
+        if args.command == "run":
+            return _cmd_run(args)
+        if args.command == "rescore":
+            return _cmd_rescore(args)
+        if args.command == "analyze":
+            return _cmd_analyze(args)
+        if args.command == "dashboard":
+            return _cmd_dashboard(args)
+        if args.command == "list-metrics":
+            return _cmd_list_metrics(args)
+    except _CleanExit:
+        return 1
+    except ToolPreflightError as exc:
+        if getattr(args, "traceback", False):
+            raise
+        print(f"error: {exc}", file=sys.stderr)
+        return 1
     parser.print_help()
     return 2
 
@@ -177,7 +226,7 @@ def _prepare_suite_run(
     from geodispbench3d.results import ResultsStore
     from geodispbench3d.suite.loader import load_suite
 
-    suite = load_suite(args.suite)
+    suite = _load_or_clean_exit(load_suite, args.suite, traceback=args.traceback)
     logger = logging.getLogger("geodispbench3d.cli")
 
     on_record_rows = None
@@ -316,7 +365,7 @@ def _cmd_analyze(args: argparse.Namespace) -> int:
     from geodispbench3d.analysis import analyze, load_analysis
     from geodispbench3d.results import ResultsStore
 
-    config = load_analysis(args.analysis)
+    config = _load_or_clean_exit(load_analysis, args.analysis, traceback=args.traceback)
     if args.pass_id:
         config = replace(config, pass_id=args.pass_id)
 
@@ -366,7 +415,8 @@ def _cmd_dashboard(args: argparse.Namespace) -> int:
             "pip install 'geodispbench3d[dashboard]'",
             file=sys.stderr,
         )
-        return 2
+        # Missing runtime dependency is a runtime failure (1), not a usage error (2).
+        return 1
 
     from geodispbench3d import dashboard as dashboard_pkg
 
@@ -378,7 +428,7 @@ def _cmd_dashboard(args: argparse.Namespace) -> int:
 def _cmd_list_metrics(args: argparse.Namespace) -> int:
     from geodispbench3d.metrics.registry import load_metrics_config
 
-    cfg = load_metrics_config(args.metrics)
+    cfg = _load_or_clean_exit(load_metrics_config, args.metrics, traceback=args.traceback)
     print("Objective metrics:")
     for m in cfg.objective_metrics:
         print(f"  - {m.id} ({m.fn})")
