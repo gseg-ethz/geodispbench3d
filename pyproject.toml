@@ -58,7 +58,7 @@ iof3d = [
 # Listed for symmetry; the adapter itself works without it (subprocess invocation).
 f2s3 = []
 dev = [
-    "ruff ~= 0.8",
+    "ruff ~= 0.15",
     "pyright ~= 1.1",
     "pre-commit ~= 4.3",
     "pytest ~= 8.4",

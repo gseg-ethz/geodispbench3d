@@ -10,7 +10,7 @@ repos:
       - id: check-merge-conflict
 
   - repo: https://github.com/astral-sh/ruff-pre-commit
-    rev: v0.8.4
+    rev: v0.15.12
     hooks:
       # Replaces black + isort + flake8 + flake8-bugbear + flake8-docstrings
       # with a single tool that's 50-100x faster and reads its config from
