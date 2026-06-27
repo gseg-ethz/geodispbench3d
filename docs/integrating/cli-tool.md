@@ -123,19 +123,22 @@ output parser knows where to look:
 
 ```yaml
 outputs:
-  from: stdout_json | glob | fixed_path
-  predictions_glob: ...      # used when from: glob
+  from: glob                 # the single blessed mode (default when unset)
+  predictions_glob: ...      # run-dir-relative glob for prediction files
   figures_glob: ...
 ```
 
-- `stdout_json` — read the last line of stdout that parses as a JSON object
-  with keys `run_dir`, `predictions`, `figures`, `scalar_metrics`. Tools you
-  control can emit this. Cleanest option.
-- `glob` — search the run dir using the configured glob patterns.
-- `fixed_path` — the run dir alone is the output (no glob).
+- `glob` — search the run dir using the configured glob patterns. This is the
+  **blessed** path and the default when `from:` is unset.
+- `stdout_json` — **deprecated.** Setting `from: stdout_json` explicitly now
+  raises at load time (`outputs.from: stdout_json is no longer supported; use
+  outputs.from: glob with a predictions_glob`). Migrate to `glob`.
+- `fixed_path` — **removed/unsupported.** Use `glob` with a `predictions_glob`
+  scoped to the run dir.
 
-If `from: stdout_json` finds no JSON line, the adapter falls back to the
-glob behavior, so it's safe to set both.
+A set `predictions_glob` that matches **zero files** is treated as a failed
+trial (a tool that ran but produced no output is data corruption, not success),
+not a silent pass — see the [subprocess contract](#subprocess-contract) below.
 
 ## Environment variables
 
@@ -157,3 +160,53 @@ geodispbench3d run benchmarks/suites/<your-suite>.yaml
 
 The adapter logs each trial's full argv at INFO level, which is the fastest
 way to debug issues with parameter rendering or path resolution.
+
+## Subprocess contract
+
+The `CliToolAdapter` runs one subprocess per trial and maps each failure mode to
+a precise outcome:
+
+| Failure mode | What the adapter does | `error_kind` |
+|---|---|---|
+| **Nonzero tool exit** | Fails the trial (`error=exit=<code>`). | `nonzero_exit` |
+| **Empty output** — a set `predictions_glob` matches zero files | Fails the trial (`error=no predictions matched glob ...`); not treated as success. | `missing_output` |
+| **Timeout** — `execution.timeout_seconds` exceeded | Kills the whole process tree (process-group `SIGKILL` on POSIX; direct-child fallback elsewhere) and fails the trial. | `timeout` |
+| **Missing env/binary** — entry / conda env unresolvable before trial 0 | Fail-fast `ToolPreflightError` before any trial runs. | — |
+
+**Failed-trial propagation.** A failed trial (any `success=False` result) is
+reported to Ax as a **FAILED** trial via `log_trial_failure` — Ax never treats
+it as a completed/scored trial — and the sweep **continues** to the next trial.
+The optimizer is not fed a bogus objective for a trial that did not actually
+produce one. The preflight case is the one exception: a missing env/binary
+fails fast *before* trial 0, since every trial would hit the same wall.
+
+### Timeout exit semantics
+
+An **individual timeout is non-fatal for the run's exit code.** When a trial
+times out the sweep continues, the timeout is surfaced on its own dedicated CLI
+line (`N trials timed out`), and the run **exits 0** as long as at least one
+trial succeeded. Do not read "a timeout fails a trial" as "a timeout makes the
+run exit non-zero" — those are different concerns (the trial is failed *to Ax*;
+the process exit code is driven separately).
+
+The exit code is driven by genuine tool/eval failures (`trial_failures` /
+`eval_failures`) **or** by a sweep that produced **zero successful trials**. A
+sweep that optimized nothing exits 1 even if every failure was a timeout
+(a timeouts-only, zero-success sweep), because there is no best trial to report.
+
+## Package CLI exit codes
+
+`geodispbench3d <subcommand>` follows a 0/1/2 taxonomy:
+
+| Exit | Meaning |
+|---|---|
+| **0** | Success. Includes a sweep with at least one successful trial whose only other failures were timeouts (individual timeouts do **not** force exit 1). |
+| **1** | Runtime / config / preflight failure: a genuine trial crash, an evaluation failure, a `ToolPreflightError`, a bad/missing config (clean `error: <msg>` line), **or** a zero-success sweep (including a timeouts-only sweep that optimized nothing). |
+| **2** | argparse usage error (unknown flag, missing argument, a rescore-only flag passed to `run`). |
+
+The exact sweep expression is
+`1 if (trial_failures or eval_failures or successful_trials == 0) else 0`:
+note again that an individual timeout alone does **not** force exit 1 — only a
+genuine failure or a zero-success sweep does. Pass `--traceback` on any
+subcommand to re-raise the original exception with its full stack instead of the
+flattened `error: <msg>` line.
