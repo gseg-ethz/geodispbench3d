@@ -4,11 +4,10 @@ milestone: v1.0
 milestone_name: milestone
 current_phase: 3
 current_phase_name: CLI Hardening
-status: verifying
+status: "Phase 2 shipped — PR #2"
 stopped_at: Completed 02-03-PLAN.md
-last_updated: "2026-06-27T09:58:03.809Z"
+last_updated: "2026-06-27T10:20:46.440Z"
 last_activity: 2026-06-27
-last_activity_desc: Phase 02 complete, transitioned to Phase 3
 progress:
   total_phases: 5
   completed_phases: 2
@@ -30,8 +29,8 @@ See: .planning/PROJECT.md (updated 2026-06-26)
 
 Phase: 3 — CLI Hardening
 Plan: Not started
-Status: Phase complete — ready for verification
-Last activity: 2026-06-27 — Phase 02 complete, transitioned to Phase 3
+Status: Phase 2 shipped — PR #2
+Last activity: 2026-06-27
 
 Progress: [░░░░░░░░░░] 0%
 
