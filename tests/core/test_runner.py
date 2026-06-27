@@ -653,3 +653,58 @@ def test_parser_fn_repr_single_source_imported_by_runner_and_rescore() -> None:
 
     assert runner_module.parser_fn_repr is parser_fn_repr
     assert rescore_mod.parser_fn_repr is parser_fn_repr
+
+
+# ---------------------------------------------------------------------------
+# F-30: ExecutionConfig.ensure_supported() is a shared, deterministically-
+# raising guard for the v2 EXEC-01 forward-compat fields (parallel_trials /
+# override_tool_mode). It raises (never warn-and-continue) and is invoked from
+# both _cmd_sweep and run_with_suite so a programmatic caller cannot bypass it.
+# The fields are RETAINED (not deleted) — this is the v2 seam.
+# ---------------------------------------------------------------------------
+
+
+def test_execution_config_ensure_supported_passes_on_defaults() -> None:
+    """The shipped defaults (parallel_trials=1, override_tool_mode=None) pass."""
+
+    from geodispbench3d.suite.loader import ExecutionConfig
+
+    ExecutionConfig().ensure_supported()
+    ExecutionConfig(parallel_trials=1, override_tool_mode=None).ensure_supported()
+
+
+def test_execution_config_ensure_supported_raises_on_parallel_trials() -> None:
+    """A non-default parallel_trials raises deterministically (D-09, not warn-only)."""
+
+    from geodispbench3d.suite.loader import ExecutionConfig
+
+    with pytest.raises(NotImplementedError):
+        ExecutionConfig(parallel_trials=2).ensure_supported()
+
+
+def test_execution_config_ensure_supported_raises_on_override_tool_mode() -> None:
+    """A set override_tool_mode raises deterministically (D-09, not warn-only)."""
+
+    from geodispbench3d.suite.loader import ExecutionConfig
+
+    with pytest.raises(NotImplementedError):
+        ExecutionConfig(override_tool_mode="subprocess").ensure_supported()
+
+
+def test_run_with_suite_invokes_guard_bypass_proof(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """run_with_suite calls the shared guard at the top — a programmatic caller
+    of run_with_suite cannot bypass the _cmd_sweep guard (F-30, codex HIGH)."""
+
+    import dataclasses
+
+    from geodispbench3d.suite.loader import ExecutionConfig
+
+    suite = _bootstrap_suite(tmp_path, ["only"])
+    suite = dataclasses.replace(suite, execution=ExecutionConfig(parallel_trials=2))
+    adapter = StubAdapter(run_root=tmp_path / "out", predictions={"only": _PRED_ERR_04})
+    runner, _fake = _make_runner(monkeypatch, adapter)
+
+    with pytest.raises(NotImplementedError):
+        runner.run_with_suite(suite=suite, max_trials=1)
