@@ -38,6 +38,7 @@ from geodispbench3d.sweep.trial_record import (
     DatasetProvenance,
     ParserProvenance,
     ToolProvenance,
+    parser_fn_repr,
     update_trial_record,
     write_trial_summary,
 )
@@ -295,7 +296,7 @@ class AxSweepRunner:
         tool_yaml = suite.tool.source_path
         tool_prov = ToolProvenance.from_yaml_path(suite.tool.id, tool_yaml)
         parser_prov = ParserProvenance(
-            fn=_parser_fn_repr(suite.tool.output_parser),
+            fn=parser_fn_repr(suite.tool.output_parser),
             options=dict(suite.tool.output_parser_options or {}),
         )
 
@@ -501,18 +502,6 @@ class AxSweepRunner:
             )
             return False
         return True
-
-
-def _parser_fn_repr(fn: Any) -> str | None:
-    """Render a parser callable as a stable ``"package.module:attr"`` string."""
-
-    if fn is None:
-        return None
-    module = getattr(fn, "__module__", None)
-    qualname = getattr(fn, "__qualname__", getattr(fn, "__name__", None))
-    if module and qualname:
-        return f"{module}:{qualname}"
-    return None
 
 
 def _normalize_trial_data(trial_data: Any) -> tuple[int, dict[str, Any]]:

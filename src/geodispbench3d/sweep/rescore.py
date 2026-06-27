@@ -46,6 +46,7 @@ from geodispbench3d.sweep.trial_record import (
     ToolProvenance,
     append_rescore_entry,
     load_trial_record,
+    parser_fn_repr,
     read_provenance,
     trial_record_path,
 )
@@ -325,7 +326,7 @@ def _rescore_one(
                     "tool": tool_prov,
                     "dataset": dataset_prov,
                     "parser": ParserProvenance(
-                        fn=_parser_fn_repr(parser_fn), options=dict(parser_options or {})
+                        fn=parser_fn_repr(parser_fn), options=dict(parser_options or {})
                     ),
                     "run_dir": str(run_dir),
                     "cached_by": "rescore",
@@ -439,16 +440,6 @@ def _resolve_dotted(entry: str) -> Callable[..., Any]:
     if not callable(fn):
         raise ImportError(f"cannot resolve callable {entry!r}")
     return fn
-
-
-def _parser_fn_repr(fn: Callable[..., Any] | None) -> str | None:
-    if fn is None:
-        return None
-    module = getattr(fn, "__module__", None)
-    qualname = getattr(fn, "__qualname__", getattr(fn, "__name__", None))
-    if module and qualname:
-        return f"{module}:{qualname}"
-    return None
 
 
 def _utcnow_compact() -> str:

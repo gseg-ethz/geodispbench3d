@@ -69,6 +69,26 @@ class ParserProvenance:
     options: Mapping[str, Any] = field(default_factory=dict)
 
 
+def parser_fn_repr(fn: Any) -> str | None:
+    """Render a parser callable as a stable ``"package.module:attr"`` string.
+
+    Single source for the provenance/cache key shared by the sweep runner and
+    the rescore pass — they must agree byte-for-byte or a rescore would write
+    to a different predictions-cache slot than the sweep that produced it.
+    Uses ``__module__`` + ``__qualname__`` (not ``__name__``) so the rendering
+    is stable across module-level functions, methods, and nested/local
+    closures (whose ``__qualname__`` carries a dotted ``<locals>`` path).
+    """
+
+    if fn is None:
+        return None
+    module = getattr(fn, "__module__", None)
+    qualname = getattr(fn, "__qualname__", getattr(fn, "__name__", None))
+    if module and qualname:
+        return f"{module}:{qualname}"
+    return None
+
+
 # ---------------------------------------------------------------------------
 # I/O primitives
 # ---------------------------------------------------------------------------
@@ -341,6 +361,7 @@ __all__ = [
     "hash_file",
     "initialize_trial_record",
     "load_trial_record",
+    "parser_fn_repr",
     "read_provenance",
     "store_trial_failure",
     "store_trial_metadata",
