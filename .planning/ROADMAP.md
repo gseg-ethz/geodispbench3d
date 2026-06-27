@@ -96,8 +96,22 @@ Decimal phases appear between their surrounding integers in numeric order.
   4. Tests cover the hardened CLI behaviours: invalid arguments, exit codes, adapter failure modes
   5. F2S3 is documented as the canonical `CliToolAdapter` example, including a "how to obtain F2S3" note sourced from the gseg-ethz F2S3 repo for the case where F2S3 is not bundled in-env
 
-**Open question for Phase 3 discussion:** F2S3 binary in-env vs subprocess/`conda-run` — decided here; subprocess favours the CLI-adapter showcase but the alternative should be evaluated.
-**Plans**: TBD
+**Open question for Phase 3 discussion:** F2S3 binary in-env vs subprocess/`conda-run` — **resolved (CONTEXT D-01): document both, default `conda run`** (F2S3 stays the subprocess + env-isolation showcase; in-env override documented).
+
+**Plans**: 4 plans
+
+**Wave 1**
+
+- [ ] 03-01-PLAN.md — Adapter contract & tool-config hardening: timeout (F-32), stdout_json→glob deprecation + empty-glob failure (F-07), env/binary preflight + ToolPreflightError (F-16)
+
+**Wave 2** *(blocked on 03-01)*
+
+- [ ] 03-02-PLAN.md — CLI surface: rescore subcommand split (D-09), 0/1/2 exit-code taxonomy + F-06 fix, clean-error wrapper (D-11), `--timeout` wiring
+
+**Wave 3** *(blocked on 03-01 + 03-02)*
+
+- [ ] 03-03-PLAN.md — CLI-04 tests: net-new `tests/core/test_cli.py` (stub executables, main()-level exit codes, adapter contract)
+- [ ] 03-04-PLAN.md — CLI-05 docs: F2S3 canonical example + how-to-obtain, subprocess contract + exit-code taxonomy, rescore migration note, schema reference
 
 ### Phase 4: Licensing, Metadata & Packaging
 
@@ -142,6 +156,6 @@ Decimal phases appear between their surrounding integers in numeric order.
 |-------|----------------|--------|-----------|
 | 1. Code-Health Audit | 2/2 | Complete    | 2026-06-26 |
 | 2. Targeted Fixes | 7/7 | Complete    | 2026-06-27 |
-| 3. CLI Hardening | 0/? | Not started | - |
+| 3. CLI Hardening | 0/4 | Planned | - |
 | 4. Licensing, Metadata & Packaging | 0/? | Not started | - |
 | 5. CI/CD & Release | 0/? | Not started | - |
