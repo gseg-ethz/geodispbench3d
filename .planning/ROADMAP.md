@@ -98,7 +98,7 @@ Decimal phases appear between their surrounding integers in numeric order.
 
 **Open question for Phase 3 discussion:** F2S3 binary in-env vs subprocess/`conda-run` — **resolved (CONTEXT D-01): document both, default `conda run`** (F2S3 stays the subprocess + env-isolation showcase; in-env override documented).
 
-**Plans**: 2/4 plans executed
+**Plans**: 3/4 plans executed
 
 **Wave 1**
 
@@ -110,7 +110,7 @@ Decimal phases appear between their surrounding integers in numeric order.
 
 **Wave 3** *(blocked on 03-01 + 03-02)*
 
-- [ ] 03-03-PLAN.md — CLI-04 tests: net-new `tests/core/test_cli.py` (stub executables, main()-level exit codes, adapter contract)
+- [x] 03-03-PLAN.md — CLI-04 tests: net-new `tests/core/test_cli.py` (stub executables, main()-level exit codes, adapter contract)
 - [ ] 03-04-PLAN.md — CLI-05 docs: F2S3 canonical example + how-to-obtain, subprocess contract + exit-code taxonomy, rescore migration note, schema reference
 
 ### Phase 4: Licensing, Metadata & Packaging
@@ -156,6 +156,6 @@ Decimal phases appear between their surrounding integers in numeric order.
 |-------|----------------|--------|-----------|
 | 1. Code-Health Audit | 2/2 | Complete    | 2026-06-26 |
 | 2. Targeted Fixes | 7/7 | Complete    | 2026-06-27 |
-| 3. CLI Hardening | 2/4 | In Progress|  |
+| 3. CLI Hardening | 3/4 | In Progress|  |
 | 4. Licensing, Metadata & Packaging | 0/? | Not started | - |
 | 5. CI/CD & Release | 0/? | Not started | - |
