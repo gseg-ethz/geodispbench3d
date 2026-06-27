@@ -18,9 +18,9 @@ classifiers = [
     "Programming Language :: Python :: 3.12",
     "License :: OSI Approved :: BSD License",
     "Operating System :: OS Independent",
-    # Remove this classifier before publishing to PyPI; PyPI rejects
-    # any package whose classifiers begin with `Private ::`.
-    "Private :: Do Not Upload",
+    "Development Status :: 4 - Beta",
+    "Intended Audience :: Science/Research",
+    "Topic :: Scientific/Engineering",
 ]
 dependencies = [
     "numpy ~= 2.0",
@@ -34,6 +34,8 @@ dependencies = [
 homepage = "https://gseg.igp.ethz.ch/"
 repository = "https://github.com/gseg-ethz/geodispbench3d"
 issues = "https://github.com/gseg-ethz/geodispbench3d/issues"
+Documentation = "https://github.com/gseg-ethz/geodispbench3d/blob/main/docs/index.md"
+Changelog = "https://github.com/gseg-ethz/geodispbench3d/blob/main/CHANGELOG.md"
 
 [project.scripts]
 geodispbench3d = "geodispbench3d.cli:main"
