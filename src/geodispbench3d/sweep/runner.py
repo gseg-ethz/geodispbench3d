@@ -238,9 +238,9 @@ class AxSweepRunner:
             ToolProvenance,
         )
 
-        tool_yaml = getattr(suite.tool, "source_path", None) or getattr(
-            suite.tool.raw, "get", lambda *_: None
-        )("__source_path__")
+        # source_path is always populated by load_tool_config (tool/loader.py),
+        # so the typed field fully replaces the old getattr/.raw fallback chain.
+        tool_yaml = suite.tool.source_path
         tool_prov = ToolProvenance.from_yaml_path(suite.tool.id, tool_yaml)
         parser_prov = ParserProvenance(
             fn=_parser_fn_repr(suite.tool.output_parser),
