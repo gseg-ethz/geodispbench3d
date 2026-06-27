@@ -146,6 +146,8 @@ Decimal phases appear between their surrounding integers in numeric order.
 
 **Open question for Phase 5 discussion (raised in Phase 2):** Type-checking strategy — keep `pyright` as the enforced CI type gate, or demote pyright to informative and adopt a strict `mypy` gate (pchandler-style), realigning the CI lint workflow accordingly. Pros/cons to be discussed here; **not pre-decided**. Carried from Phase 2's "pyright is RED at HEAD" finding — see `.planning/phases/02-targeted-fixes/02-RESEARCH.md` Assumption A1 and Phase 2 CONTEXT.md D-13.
 
+**CI-health evidence (flagged 2026-06-27, Phase 3 ship of PR #3):** The CI Lint job runs **raw `pyright`** (exit 1 on any error) and is **red on every run** — `develop` pushes and the Phase 1, 2, and 3 PRs all merged with it red. The standing baseline is **14 errors, 22 warnings**, dominated by unresolved plugin imports (`iof3D` / `pchandler` / `pc2img`, which CI does not install) plus a few pre-existing type-narrowing errors. Because `Test` and `Build wheel + install smoke` are gated behind Lint via `needs:`, **the entire test/build matrix is skipped on every PR** — so success criterion #1 above is currently unmet in practice. GSD phases gate locally on a pyright **baseline-diff** (no NEW errors vs `develop`), not green CI; Phase 3 was diff-clean (same 14/22). Greening this gate before the public release is the concrete work item here — options: baseline-aware pyright, scope pyright to core + exclude uninstalled-plugin imports, install the `iof3d` extra in CI, or the mypy-swap above. Decoupling `Test`/`Build` from the Lint gate is a related sub-decision so type-check policy does not silently mask test regressions.
+
 **Plans**: TBD
 
 ## Progress
