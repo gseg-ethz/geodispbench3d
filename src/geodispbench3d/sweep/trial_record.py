@@ -91,10 +91,21 @@ def parser_fn_repr(fn: Any) -> str | None:
 # ---------------------------------------------------------------------------
 
 
+def trial_summary_file(run_dir: Path) -> Path:
+    """Path to a run dir's trial summary, *without* creating anything.
+
+    Pure path constructor for read/membership checks (e.g. walking a results
+    tree to discover real run dirs). Use :func:`trial_record_path` instead when
+    you intend to write — it ensures the ``ax_trial/`` parent exists.
+    """
+
+    return Path(run_dir) / "ax_trial" / "summary.json"
+
+
 def trial_record_path(run_dir: Path) -> Path:
-    out_dir = Path(run_dir) / "ax_trial"
-    out_dir.mkdir(parents=True, exist_ok=True)
-    return out_dir / "summary.json"
+    path = trial_summary_file(run_dir)
+    path.parent.mkdir(parents=True, exist_ok=True)
+    return path
 
 
 def load_trial_record(
@@ -350,6 +361,7 @@ __all__ = [
     "store_trial_failure",
     "store_trial_metadata",
     "trial_record_path",
+    "trial_summary_file",
     "trial_summary_path",
     "update_trial_record",
     "write_trial_record",

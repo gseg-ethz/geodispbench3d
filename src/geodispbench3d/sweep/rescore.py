@@ -49,6 +49,7 @@ from geodispbench3d.sweep.trial_record import (
     parser_fn_repr,
     read_provenance,
     trial_record_path,
+    trial_summary_file,
 )
 from geodispbench3d.tool.base import TrialOutputs, TrialResult
 
@@ -220,7 +221,11 @@ def _walk_run_dirs(suite: Any, log: logging.Logger) -> list[Path]:
     if not root_path.is_dir():
         log.warning("rescore: run_dir_root %s does not exist", root_path)
         return []
-    return sorted(p for p in root_path.iterdir() if p.is_dir() and trial_record_path(p).is_file())
+    # Use the *pure* path constructor here: this walk touches every immediate
+    # child of run_dir_root, including non-run-dir siblings. The mkdir side
+    # effect of ``trial_record_path`` would otherwise litter the results tree
+    # with spurious empty ``ax_trial/`` dirs under unrelated directories (WR-01).
+    return sorted(p for p in root_path.iterdir() if p.is_dir() and trial_summary_file(p).is_file())
 
 
 def _resolve_case(
