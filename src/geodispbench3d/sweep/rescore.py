@@ -1,4 +1,4 @@
-"""``--rescore`` mode: re-evaluate existing run dirs without invoking the tool.
+"""``rescore`` mode: re-evaluate existing run dirs without invoking the tool.
 
 The flow walks every run directory under a suite's ``results.run_dir_root``
 that carries an ``ax_trial/summary.json`` and, per run:

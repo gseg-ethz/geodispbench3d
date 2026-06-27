@@ -459,7 +459,7 @@ class AxSweepRunner:
             diag.add("evaluation", evaluation.non_fatal_failures)
 
             # Stamp provenance into the run's summary.json so downstream
-            # --rescore / analyze invocations can find tool, dataset, and
+            # rescore / analyze invocations can find tool, dataset, and
             # parser context without consulting the original suite YAML.
             try:
                 update_trial_record(
@@ -481,7 +481,7 @@ class AxSweepRunner:
                 )
                 diag.add("provenance_stamp")
 
-            # Cache phase-2 output so future --rescore / analyze passes
+            # Cache phase-2 output so future rescore / analyze passes
             # can skip re-parsing. Failures here are non-fatal; the trial
             # itself succeeded and Ax already has its scalar.
             predictions_root = getattr(suite.results, "predictions_root", None)

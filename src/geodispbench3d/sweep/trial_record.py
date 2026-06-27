@@ -12,7 +12,7 @@ Layout under each run directory::
 The summary structure is intentionally flat and forward-compatible:
 fields added in future versions are written with sensible defaults; old
 summaries missing those fields are read with ``None``. ``rescore_log`` is
-the one append-only field — every ``--rescore`` pass appends one entry
+the one append-only field — every ``rescore`` pass appends one entry
 so the audit trail is preserved.
 """
 
@@ -57,9 +57,9 @@ class DatasetProvenance:
 class ParserProvenance:
     """Phase-2 parser configuration that produced the prediction.
 
-    Storing this lets ``--rescore --reuse-parser-options`` reproduce the
-    exact phase-2 output from a previous trial, while plain ``--rescore``
-    can override with the suite's current options.
+    Storing this lets ``rescore --reuse-parser-options`` reproduce the
+    exact phase-2 output from a previous trial, while a plain ``rescore``
+    pass can override with the suite's current options.
     """
 
     fn: str | None = None
@@ -276,7 +276,7 @@ def store_trial_failure(
 
 
 # ---------------------------------------------------------------------------
-# Provenance read-back (used by --rescore + analyze)
+# Provenance read-back (used by the rescore + analyze passes)
 # ---------------------------------------------------------------------------
 
 
