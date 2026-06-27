@@ -6,14 +6,14 @@ current_phase: 02
 current_phase_name: targeted-fixes
 status: executing
 stopped_at: Completed 02-03-PLAN.md
-last_updated: "2026-06-27T08:47:05.879Z"
+last_updated: "2026-06-27T08:53:45.548Z"
 last_activity: 2026-06-27
 last_activity_desc: Phase 02 execution started
 progress:
   total_phases: 5
   completed_phases: 1
   total_plans: 9
-  completed_plans: 5
+  completed_plans: 6
   percent: 20
 ---
 
@@ -29,7 +29,7 @@ See: .planning/PROJECT.md (updated 2026-06-26)
 ## Current Position
 
 Phase: 02 (targeted-fixes) — EXECUTING
-Plan: 4 of 7
+Plan: 5 of 7
 Status: Ready to execute
 Last activity: 2026-06-27 — Phase 02 execution started
 
@@ -60,6 +60,7 @@ Progress: [░░░░░░░░░░] 0%
 | Phase 02 P01 | 7min | 2 tasks | 1 files |
 | Phase 02 P02 | 55min | 3 tasks | 5 files |
 | Phase 02 P03 | 12min | 3 tasks | 4 files |
+| Phase 02 P04 | 12min | 1 tasks | 4 files |
 
 ## Accumulated Context
 
@@ -79,6 +80,7 @@ Recent decisions affecting current work:
 - [Phase ?]: 02-02: pyright gate baseline is the dev-env capture (1.1.403 + full extras, 21 errors); CI-faithful 1.1.392/.[dev] (16 errors) is a doc-only strict-subset reference
 - [Phase ?]: 02-02: pyright_gate.py uses line-number-independent (file, rule, normalized-message) multiset signatures, replacing raw 'pyright &&' for 02-03/04/05/07
 - [Phase 02-03]: SuiteConfig retype + provenance collapse (F-01/F-13); objective-specific finite-case signal (F-05) via SweepRunSummary + dedicated trial-level artifact, kept off the Ax objective payload — Typed consumers remove 15 attr-defined ignores with no new pyright errors; finite/total is objective-specific (self._objective_name) and surfaced via log + artifact + return, never injected into complete_trial raw_data
+- [Phase 02]: 02-04: SweepParameter coercion single-sourced via from_mapping classmethod (F-02/FIX-03); three sites routed through it, _coerce_hparam removed; net -2 pyright errors (values-list patterns cleared at tool/loader.py + factory.py); from_mapping is a class member, not in __all__
 
 ### Open Questions (surface at phase discussions)
 
@@ -110,6 +112,6 @@ yet.
 
 ## Session Continuity
 
-Last session: 2026-06-27T08:46:14.154Z
+Last session: 2026-06-27T08:53:19.739Z
 Stopped at: Completed 02-03-PLAN.md
 Resume file: None

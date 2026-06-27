@@ -59,7 +59,7 @@ Decimal phases appear between their surrounding integers in numeric order.
   3. `SweepParameter` construction is handled by a single source (e.g. `from_mapping` classmethod); `_parser_fn_repr` lives in one shared location, not two
   4. `ruff`, `pyright`, and the full `pytest` suite (core, iof3d, f2s3) pass without errors after every fix lands
 
-**Plans**: 3/7 plans executed
+**Plans**: 4/7 plans executed
 
 **Wave 0** *(test net + pyright baseline — D-04 tests-first)*
 
@@ -69,7 +69,7 @@ Decimal phases appear between their surrounding integers in numeric order.
 **Wave 1** *(blocked on Wave 0)*
 
 - [x] 02-03-PLAN.md — F-01 typed SuiteConfig + F-13 provenance fold + F-05 finite-case surfacing
-- [ ] 02-04-PLAN.md — F-02 SweepParameter.from_mapping dedup (parallel; disjoint files)
+- [x] 02-04-PLAN.md — F-02 SweepParameter.from_mapping dedup (parallel; disjoint files)
 
 **Wave 2** *(blocked on 02-03)*
 
@@ -141,7 +141,7 @@ Decimal phases appear between their surrounding integers in numeric order.
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
 | 1. Code-Health Audit | 2/2 | Complete    | 2026-06-26 |
-| 2. Targeted Fixes | 3/7 | In Progress|  |
+| 2. Targeted Fixes | 4/7 | In Progress|  |
 | 3. CLI Hardening | 0/? | Not started | - |
 | 4. Licensing, Metadata & Packaging | 0/? | Not started | - |
 | 5. CI/CD & Release | 0/? | Not started | - |
