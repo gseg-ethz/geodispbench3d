@@ -2,11 +2,17 @@
 
 Usage::
 
-    geodispbench3d run <suite.yaml>
-    geodispbench3d run <suite.yaml> --rescore [flags]
+    geodispbench3d run <suite.yaml> [--timeout SECONDS]
+    geodispbench3d rescore <suite.yaml> [flags]
     geodispbench3d analyze <analysis.yaml>
     geodispbench3d dashboard [--parquet PATH]
     geodispbench3d list-metrics <metrics.yaml>
+
+The config-loading subcommands (run / rescore / analyze / list-metrics) accept
+``--traceback`` placed AFTER the subcommand
+(e.g. ``geodispbench3d run <suite.yaml> --traceback``) to surface the full stack
+for a config-load or tool-preflight error instead of the default one-line
+``error: <msg>``. This is the single canonical placement for the flag.
 """
 
 from __future__ import annotations
@@ -18,14 +24,39 @@ from pathlib import Path
 from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
+    from collections.abc import Callable, Mapping, Sequence
+    from typing import Any
+
     from geodispbench3d.suite.loader import SuiteConfig
+
+    # The optional results sink: ResultsStore.append, or None when no parquet
+    # path is configured. Matches rescore_suite / run_with_suite's parameter.
+    OnRecordRows = Callable[[Sequence[Mapping[str, Any]]], None] | None
 
 
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(prog="geodispbench3d")
     sub = parser.add_subparsers(dest="command", required=True)
 
-    run_p = sub.add_parser("run", help="Run a sweep described by a suite.yaml")
+    # Shared parent parser carrying --traceback. Subcommands that load config
+    # inherit it via parents=[...], so the single canonical placement is
+    # ``geodispbench3d <subcommand> ... --traceback`` (review LOW: do NOT also
+    # wire a bare pre-subcommand flag — one unambiguous form only).
+    traceback_parent = argparse.ArgumentParser(add_help=False)
+    traceback_parent.add_argument(
+        "--traceback",
+        action="store_true",
+        help=(
+            "On a config-load or tool-preflight error, print the full traceback "
+            "instead of the default one-line 'error: <msg>'."
+        ),
+    )
+
+    run_p = sub.add_parser(
+        "run",
+        parents=[traceback_parent],
+        help="Run a sweep described by a suite.yaml",
+    )
     run_p.add_argument("suite", help="Path to suite.yaml")
     run_p.add_argument("--log-level", default="INFO")
     run_p.add_argument(
@@ -35,35 +66,55 @@ def main(argv: list[str] | None = None) -> int:
         help="Override suite.search.max_trials",
     )
     run_p.add_argument(
-        "--rescore",
-        action="store_true",
+        "--timeout",
+        type=float,
+        default=None,
         help=(
-            "Skip the tool: walk every existing run dir under "
-            "results.run_dir_root and re-evaluate metrics against the "
-            "current suite. Ax is not invoked."
+            "Override the tool's execution.timeout_seconds (seconds). "
+            "0 means no timeout. Applies only to CLI-subprocess tools."
         ),
     )
-    run_p.add_argument(
+
+    rescore_p = sub.add_parser(
+        "rescore",
+        parents=[traceback_parent],
+        help=(
+            "Skip the tool: walk every existing run dir under "
+            "results.run_dir_root and re-evaluate metrics against the suite"
+        ),
+    )
+    rescore_p.add_argument("suite", help="Path to suite.yaml")
+    rescore_p.add_argument("--log-level", default="INFO")
+    rescore_p.add_argument(
         "--reuse-parser-options",
         action="store_true",
         help=(
-            "(--rescore only) reproduce the parser configuration recorded "
-            "in each trial's summary.json instead of using the suite's "
-            "current output_parser options."
+            "Reproduce the parser configuration recorded in each trial's "
+            "summary.json instead of using the suite's current output_parser "
+            "options."
         ),
     )
-    run_p.add_argument(
+    rescore_p.add_argument(
         "--use-prediction-cache",
         action="store_true",
         help=(
-            "(--rescore only) load predictions from the predictions cache "
-            "when available, skipping phase 2 entirely."
+            "Load predictions from the predictions cache when available, "
+            "skipping phase 2 entirely."
         ),
     )
-    run_p.add_argument(
+    rescore_p.add_argument(
         "--pass-id",
         default=None,
-        help="(--rescore only) tag this rescore pass in the parquet rows.",
+        help="Tag this rescore pass in the parquet rows.",
+    )
+    rescore_p.add_argument(
+        "--max-trials",
+        type=int,
+        default=None,
+        help=(
+            "Accepted for symmetry but ignored: rescore walks existing run "
+            "dirs, so there is no trial budget to cap."
+        ),
     )
 
     dash_p = sub.add_parser("dashboard", help="Launch the Streamlit dashboard")
@@ -73,11 +124,16 @@ def main(argv: list[str] | None = None) -> int:
         help="Path to the results parquet file (default: $GEODISPBENCH3D_PARQUET or ./outputs/results.parquet)",
     )
 
-    list_p = sub.add_parser("list-metrics", help="List metrics declared in a metrics.yaml")
+    list_p = sub.add_parser(
+        "list-metrics",
+        parents=[traceback_parent],
+        help="List metrics declared in a metrics.yaml",
+    )
     list_p.add_argument("metrics", help="Path to metrics.yaml")
 
     analyze_p = sub.add_parser(
         "analyze",
+        parents=[traceback_parent],
         help="Score cached predictions against a metrics set (no tool involvement)",
     )
     analyze_p.add_argument("analysis", help="Path to analysis.yaml")
@@ -92,6 +148,8 @@ def main(argv: list[str] | None = None) -> int:
 
     if args.command == "run":
         return _cmd_run(args)
+    if args.command == "rescore":
+        return _cmd_rescore(args)
     if args.command == "analyze":
         return _cmd_analyze(args)
     if args.command == "dashboard":
@@ -102,7 +160,16 @@ def main(argv: list[str] | None = None) -> int:
     return 2
 
 
-def _cmd_run(args: argparse.Namespace) -> int:
+def _prepare_suite_run(
+    args: argparse.Namespace,
+) -> tuple[SuiteConfig, OnRecordRows, logging.Logger]:
+    """Shared prelude for ``run`` (sweep) and ``rescore``.
+
+    Configures logging, loads the suite, and builds the optional results sink.
+    Both subcommands reuse it so the sweep / rescore split lives only in their
+    handlers, not in duplicated setup.
+    """
+
     logging.basicConfig(
         level=getattr(logging, args.log_level.upper(), logging.INFO),
         format="[%(asctime)s][%(name)s][%(levelname)s] %(message)s",
@@ -118,9 +185,13 @@ def _cmd_run(args: argparse.Namespace) -> int:
         store = ResultsStore(parquet_path=suite.results.parquet_path)
         on_record_rows = store.append
 
-    if args.rescore:
-        return _cmd_rescore(args, suite, on_record_rows, logger)
+    return suite, on_record_rows, logger
 
+
+def _cmd_run(args: argparse.Namespace) -> int:
+    """``run``: drive an Ax sweep over the suite (sweep-only; see ``rescore``)."""
+
+    suite, on_record_rows, logger = _prepare_suite_run(args)
     return _cmd_sweep(args, suite, on_record_rows, logger)
 
 
@@ -185,18 +256,15 @@ def _cmd_sweep(
     return 0
 
 
-def _cmd_rescore(
-    args: argparse.Namespace,
-    suite: SuiteConfig,
-    on_record_rows,
-    logger: logging.Logger,
-) -> int:
-    """``run --rescore``: skip the tool, re-run metrics over existing run dirs."""
+def _cmd_rescore(args: argparse.Namespace) -> int:
+    """``rescore``: skip the tool, re-run metrics over existing run dirs."""
+
+    suite, on_record_rows, logger = _prepare_suite_run(args)
 
     from geodispbench3d.sweep.rescore import RescoreOptions, rescore_suite
 
     if args.max_trials is not None:
-        logger.warning("--max-trials is ignored in --rescore mode")
+        logger.warning("--max-trials has no effect in rescore mode")
 
     options = RescoreOptions(
         reuse_parser_options=bool(args.reuse_parser_options),
