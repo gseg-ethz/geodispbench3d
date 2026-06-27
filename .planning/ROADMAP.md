@@ -130,7 +130,17 @@ Decimal phases appear between their surrounding integers in numeric order.
 - Resolve `pchandler` for the F2S3 parser via the `f2s3` extra vs a `pchandler`-free example parser
 - Ship `geodispbench3d_iof3d` and the `iof3d-ax` script in the public distribution, or exclude them
 
-**Plans**: TBD
+**Both resolved in 04-CONTEXT.md:** (D-01) single wheel, ship `geodispbench3d_iof3d` dormant via a PEP 562 import guard + graceful `iof3d-ax` launcher; (D-05) add `pchandler ~= 2.1` to the `f2s3` extra (F2S3 stays fully runnable).
+
+**Plans**: 2 plans
+
+**Wave 1**
+
+- [ ] 04-01-PLAN.md — Licensing & metadata reconciliation: README License (Proprietary → BSD-3-Clause) + no-timeline `[iof3d]` note, `pyproject.toml` classifiers (drop `Private`, add Beta/audience/topic) + Documentation/Changelog URLs, confirm `CITATION.cff`/`LICENSE` (LIC-01…04)
+
+**Wave 2** *(blocked on 04-01 — shared `pyproject.toml`)*
+
+- [ ] 04-02-PLAN.md — Packaging & dormant-iof3D guard: comment `iof3d` extra + `f2s3 = ["pchandler ~= 2.1"]`, PEP 562 `__getattr__` guard in `geodispbench3d_iof3d/__init__.py` + `cli.py` launcher split, conftest skip-message fix (PKG-01…03)
 
 ### Phase 5: CI/CD & Release
 
@@ -159,5 +169,5 @@ Decimal phases appear between their surrounding integers in numeric order.
 | 1. Code-Health Audit | 2/2 | Complete    | 2026-06-26 |
 | 2. Targeted Fixes | 7/7 | Complete    | 2026-06-27 |
 | 3. CLI Hardening | 4/4 | Complete    | 2026-06-27 |
-| 4. Licensing, Metadata & Packaging | 0/? | Not started | - |
+| 4. Licensing, Metadata & Packaging | 0/2 | Not started | - |
 | 5. CI/CD & Release | 0/? | Not started | - |
