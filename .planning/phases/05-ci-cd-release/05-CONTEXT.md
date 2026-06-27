@@ -227,7 +227,43 @@ release-please, branch-protection, and RTD setup are mirrored here unless noted.
 
 </deferred>
 
+<planning_amendments>
+## Planning-Session Amendments (2026-06-27, post-research)
+
+Decisions made during `/gsd-plan-phase 5` after research surfaced new constraints.
+These **extend or supersede** the locked decisions above and are authoritative for
+the plans.
+
+- **D-03 SUPERSEDED — drop Python 3.11; package is Python 3.12-only.** Research
+  confirmed `pchandler 2.1.0` (the `f2s3` extra's dep) declares
+  `requires-python = ">=3.12,<3.13"`, so `f2s3` cannot install on 3.11 and a
+  symmetric 3.11+3.12 matrix is impossible. **User decision:** move the entire
+  package to 3.12 rather than run an asymmetric matrix. Concretely:
+  - `pyproject.toml`: `requires-python = "~=3.12"` (was `~=3.11`); drop the
+    `Programming Language :: Python :: 3.11` classifier (keep 3.12).
+  - `ruff` `target-version = "py312"`; `pyright` `pythonVersion = "3.12"`.
+  - CI test matrix is **3.12 only**: `Test (core, 3.12)` + `Test (f2s3, 3.12)`.
+  - **D-08 required-status-check contexts** become: `Lint (ruff + pyright)`,
+    `Test (core, 3.12)`, `Test (f2s3, 3.12)`, `Build wheel + install smoke`.
+  - A plan task **updates ROADMAP Phase 5 success criterion #1 and
+    REQUIREMENTS CICD-01** to read "Python 3.12" (both currently say "3.11 and
+    3.12").
+- **D-09 EXTENDED — modern docs toolchain.** Use the modern set mirroring
+  PCHandler: `docs = ["sphinx ~= 8.1", "myst-parser ~= 4.0", "sphinx-rtd-theme ~= 3.0"]`,
+  pinned against a resolved `pip install -e .[docs]` before committing. Docs build
+  on 3.12.
+- **D-05/D-07 EXTENDED — release-please-action bumped v4 → v5.0.0** (SHA-pinned
+  `45996ed1f6d02564a971a2fa1b5860e934307cf7`) to match PCHandler; same call shape.
+- **Optional hardening — ALL THREE INCLUDED:**
+  - Port PCHandler's `check_publish_gate.py` into the lint job (assert publish
+    steps live only in `publish-pypi.yml` / `publish-testpypi.yml`).
+  - `Docs build` as a **blocking PR check** (`sphinx-build -W --keep-going`) — but
+    **NOT** a D-08 required status check until RTD activates post-public.
+  - Add an **`actionlint`** workflow-lint step to catch Actions YAML/expression errors.
+</planning_amendments>
+
 ---
 
 *Phase: 5-ci-cd-release*
 *Context gathered: 2026-06-27*
+*Amended: 2026-06-27 (plan-phase, post-research)*
