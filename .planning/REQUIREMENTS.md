@@ -31,16 +31,16 @@ Requirements for this milestone. Each maps to roadmap phases.
 
 ### Licensing & Metadata
 
-- [ ] **LIC-01**: The README license statement is reconciled with `pyproject.toml` + `LICENSE` (all BSD-3-Clause; README currently says Proprietary)
-- [ ] **LIC-02**: The `Private :: Do Not Upload` classifier is removed; OSI license + supported-Python classifiers confirmed correct
-- [ ] **LIC-03**: Package metadata (description, project URLs, authors) verified/completed for public release
-- [ ] **LIC-04**: `CITATION.cff` and docs reflect the public BSD-3-Clause status
+- [x] **LIC-01**: The README license statement is reconciled with `pyproject.toml` + `LICENSE` (all BSD-3-Clause; README currently says Proprietary)
+- [x] **LIC-02**: The `Private :: Do Not Upload` classifier is removed; OSI license + supported-Python classifiers confirmed correct
+- [x] **LIC-03**: Package metadata (description, project URLs, authors) verified/completed for public release
+- [x] **LIC-04**: `CITATION.cff` and docs reflect the public BSD-3-Clause status
 
 ### Packaging & Dependencies
 
-- [ ] **PKG-01**: The `iof3d` optional dependency is commented out / disabled for the public release (iof3D is not public at go-live)
-- [ ] **PKG-02**: The F2S3 path is installable standalone — `pchandler` resolves without the `iof3d` extra (today the `f2s3` extra is empty but the parser imports `pchandler`)
-- [ ] **PKG-03**: geodispbench3d's `pchandler` usage is verified against the newly-published `pchandler` on PyPI and confirmed non-breaking (or adapted)
+- [x] **PKG-01**: The `iof3d` optional dependency is commented out / disabled for the public release (iof3D is not public at go-live)
+- [x] **PKG-02**: The F2S3 path is installable standalone — `pchandler` resolves without the `iof3d` extra (today the `f2s3` extra is empty but the parser imports `pchandler`)
+- [x] **PKG-03**: geodispbench3d's `pchandler` usage is verified against the newly-published `pchandler` on PyPI and confirmed non-breaking (or adapted)
 
 ### CI/CD & Release
 
@@ -92,13 +92,13 @@ Which phases cover which requirements. Updated during roadmap creation.
 | CLI-03 | Phase 3 | Complete |
 | CLI-04 | Phase 3 | Complete |
 | CLI-05 | Phase 3 | Complete |
-| LIC-01 | Phase 4 | Pending |
-| LIC-02 | Phase 4 | Pending |
-| LIC-03 | Phase 4 | Pending |
-| LIC-04 | Phase 4 | Pending |
-| PKG-01 | Phase 4 | Pending |
-| PKG-02 | Phase 4 | Pending |
-| PKG-03 | Phase 4 | Pending |
+| LIC-01 | Phase 4 | Complete |
+| LIC-02 | Phase 4 | Complete |
+| LIC-03 | Phase 4 | Complete |
+| LIC-04 | Phase 4 | Complete |
+| PKG-01 | Phase 4 | Complete |
+| PKG-02 | Phase 4 | Complete |
+| PKG-03 | Phase 4 | Complete |
 | CICD-01 | Phase 5 | Pending |
 | CICD-02 | Phase 5 | Pending |
 | CICD-03 | Phase 5 | Pending |
