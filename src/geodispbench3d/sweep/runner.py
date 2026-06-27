@@ -231,6 +231,11 @@ class AxSweepRunner:
         later if multi-case sweeps need different aggregation).
         """
 
+        # Shared, deterministically-raising guard for the v2 EXEC-01 seam
+        # (parallel_trials / override_tool_mode). Invoked here AND in
+        # cli._cmd_sweep so a programmatic caller cannot bypass it (F-30).
+        suite.execution.ensure_supported()
+
         from geodispbench3d.metrics.registry import MetricRegistry
 
         registry = MetricRegistry()

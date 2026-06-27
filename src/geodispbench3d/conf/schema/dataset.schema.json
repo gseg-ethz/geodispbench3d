@@ -40,7 +40,6 @@
         }
       }
     },
-    "gt_kinds_supported": {"type": "array", "items": {"type": "string"}},
     "metadata": {"type": "object"}
   }
 }

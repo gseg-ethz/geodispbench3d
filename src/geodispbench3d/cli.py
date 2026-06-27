@@ -133,6 +133,11 @@ def _cmd_sweep(
     from geodispbench3d.sweep.parameters import SweepConfig, build_parameter_specs
     from geodispbench3d.sweep.runner import AxSweepRunner
 
+    # Shared guard for the v2 EXEC-01 seam: raise deterministically rather than
+    # silently no-op an unsupported parallel_trials / override_tool_mode (D-09).
+    # run_with_suite enforces the same guard, so neither path can bypass it.
+    suite.execution.ensure_supported()
+
     max_trials = args.max_trials or suite.search.max_trials
 
     sweep_cfg = SweepConfig(

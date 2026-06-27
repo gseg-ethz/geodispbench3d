@@ -30,6 +30,32 @@ class ExecutionConfig:
     parallel_trials: int = 1
     override_tool_mode: str | None = None  # "subprocess" | "in_process" | None
 
+    def ensure_supported(self) -> None:
+        """Raise if this config requests an unimplemented execution feature.
+
+        ``parallel_trials`` and ``override_tool_mode`` are forward-compat seams
+        for the tracked v2 EXEC-01 requirement; the current runner evaluates
+        trials sequentially using each adapter's declared mode. Rather than
+        silently no-op an operator's explicit request (D-09 — "cannot silently
+        no-op"), this guard RAISES deterministically. It is the single shared
+        guard invoked from both ``cli._cmd_sweep`` and
+        ``AxSweepRunner.run_with_suite`` so a programmatic caller of the runner
+        cannot bypass it. The fields are retained as the v2 seam, not deleted.
+        """
+
+        if self.parallel_trials != 1:
+            raise NotImplementedError(
+                f"execution.parallel_trials={self.parallel_trials!r} is not yet "
+                "supported: the runner evaluates trials sequentially. This is a "
+                "v2 EXEC-01 seam — set parallel_trials: 1."
+            )
+        if self.override_tool_mode is not None:
+            raise NotImplementedError(
+                f"execution.override_tool_mode={self.override_tool_mode!r} is not "
+                "yet supported: the adapter's declared mode is used. This is a "
+                "v2 EXEC-01 seam — leave override_tool_mode unset."
+            )
+
 
 @dataclass(frozen=True)
 class ResultsConfig:

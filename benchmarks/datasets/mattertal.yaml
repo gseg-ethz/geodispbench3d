@@ -15,8 +15,6 @@ metadata:
     (post-rotation) frame; the historical in-code GTPointArray applied a
     (-x, -y, z) rotation for the first 6 entries — that has been baked into
     the CSV.
-gt_kinds_supported:
-  - point_displacements
 cases:
   - name: mattertal-all
     scans: []
