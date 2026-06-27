@@ -100,7 +100,12 @@ is materialized.
 
 ## Legacy entry point
 
-The previous `iof3d-ax` Hydra CLI still works for users not yet on the
-suite-driven workflow. It now delegates to
-[`geodispbench3d_iof3d.cli`](../../src/geodispbench3d_iof3d/cli.py), which
-constructs the same adapter the suite path uses.
+The previous `iof3d-ax` Hydra CLI still works **when iof3D is installed**, for
+users not yet on the suite-driven workflow. It now delegates to
+[`geodispbench3d_iof3d.cli`](../../src/geodispbench3d_iof3d/cli.py), a thin
+launcher that lazily imports the hydra-decorated implementation from
+`_sweep_cli.py` and constructs the same adapter the suite path uses. Note the
+public wheel ships the iof3D adapter **dormant**: the `[iof3d]` extra is
+disabled until iof3D is publicly available, so on a public install `iof3d-ax`
+exits with an actionable "iof3D not yet publicly available" message rather than
+running.
