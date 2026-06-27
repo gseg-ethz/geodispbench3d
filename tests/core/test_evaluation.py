@@ -129,9 +129,7 @@ def test_metric_raise_is_skipped_while_others_survive(tmp_path: Path) -> None:
 # --- (c) objective metric returns non-scalar -> warning + skip --------------
 
 
-def test_objective_metric_non_scalar_is_warned_and_skipped(
-    tmp_path: Path, caplog: Any
-) -> None:
+def test_objective_metric_non_scalar_is_warned_and_skipped(tmp_path: Path, caplog: Any) -> None:
     def listy(**_: Any) -> Any:
         # float([1.0, 2.0]) raises TypeError -> the non-scalar branch.
         return [1.0, 2.0]
@@ -208,11 +206,7 @@ def test_gt_kind_filter_runs_matching_and_skips_nonmatching(tmp_path: Path) -> N
         scans=(),
         ground_truth=GroundTruthSpec(
             kind="point_displacements",
-            inline={
-                "points": [
-                    {"label": "A", "xyz_epoch1": [0, 0, 0], "xyz_epoch2": [0.1, 0, 0]}
-                ]
-            },
+            inline={"points": [{"label": "A", "xyz_epoch1": [0, 0, 0], "xyz_epoch2": [0.1, 0, 0]}]},
         ),
     )
 
