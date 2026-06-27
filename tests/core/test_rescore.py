@@ -7,6 +7,7 @@ import logging
 import sys
 import textwrap
 from dataclasses import asdict
+from datetime import datetime
 from pathlib import Path
 
 import pytest
@@ -137,6 +138,13 @@ def test_rescore_default_options(tmp_path: Path) -> None:
     record = load_trial_record(trial_record_path(tmp_path / "runs" / "abcdef123456"))
     assert len(record["rescore_log"]) == 1
     assert record["rescore_log"][0]["parser_source"] == "suite"
+
+    # F-09: the appended audit timestamp is offset-aware (+00:00, not a manual
+    # "Z") and round-trips through datetime.fromisoformat.
+    rescored_at = record["rescore_log"][0]["rescored_at"]
+    assert not rescored_at.endswith("Z")
+    parsed = datetime.fromisoformat(rescored_at)
+    assert parsed.tzinfo is not None
 
 
 def test_rescore_with_prediction_cache_hit(tmp_path: Path) -> None:

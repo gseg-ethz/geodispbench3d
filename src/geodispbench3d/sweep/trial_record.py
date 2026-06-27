@@ -315,7 +315,7 @@ def _parser_payload(parser: ParserProvenance) -> dict[str, Any]:
 
 
 def _utcnow() -> str:
-    return datetime.utcnow().isoformat(timespec="seconds") + "Z"
+    return datetime.now(UTC).isoformat(timespec="seconds")
 
 
 def hash_file(path: Path | None) -> str | None:

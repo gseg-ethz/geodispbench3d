@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from datetime import datetime
 from pathlib import Path
 
 from geodispbench3d.results.predictions_cache import (
@@ -37,6 +38,13 @@ def test_write_and_read_roundtrip(tmp_path: Path) -> None:
     assert payload["prediction"]["per_point"][0]["label"] == "A"
     assert payload["provenance"]["parser"]["options"]["radius"] == 15.0
     assert "cached_at" in payload["provenance"]
+
+    # F-09: the stamped timestamp is offset-aware (+00:00, not a manual "Z")
+    # and round-trips through datetime.fromisoformat.
+    cached_at = payload["provenance"]["cached_at"]
+    assert not cached_at.endswith("Z")
+    parsed = datetime.fromisoformat(cached_at)
+    assert parsed.tzinfo is not None
 
 
 def test_find_predictions_filters_by_segment(tmp_path: Path) -> None:

@@ -34,7 +34,7 @@ from __future__ import annotations
 import json
 from collections.abc import Callable, Mapping
 from dataclasses import asdict, is_dataclass
-from datetime import datetime
+from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
 
@@ -94,7 +94,7 @@ def write_prediction(
         "provenance": _to_jsonable(
             {
                 **(dict(provenance) if provenance else {}),
-                "cached_at": datetime.utcnow().isoformat(timespec="seconds") + "Z",
+                "cached_at": datetime.now(UTC).isoformat(timespec="seconds"),
             }
         ),
     }

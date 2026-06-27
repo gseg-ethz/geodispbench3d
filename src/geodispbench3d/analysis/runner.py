@@ -18,7 +18,7 @@ from __future__ import annotations
 import logging
 from collections.abc import Callable, Mapping, Sequence
 from dataclasses import dataclass
-from datetime import datetime
+from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
 
@@ -191,7 +191,7 @@ def _provenance_run_hash(provenance: Mapping[str, Any], path: Path) -> str:
 
 
 def _utcnow_compact() -> str:
-    return datetime.utcnow().strftime("analyze-%Y%m%dT%H%M%S")
+    return datetime.now(UTC).strftime("analyze-%Y%m%dT%H%M%S")
 
 
 __all__ = ["AnalysisSummary", "analyze"]

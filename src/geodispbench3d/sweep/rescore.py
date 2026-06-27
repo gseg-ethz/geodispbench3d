@@ -25,7 +25,7 @@ import importlib
 import logging
 from collections.abc import Callable, Iterable, Mapping, Sequence
 from dataclasses import asdict, dataclass
-from datetime import datetime
+from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
 
@@ -341,7 +341,7 @@ def _rescore_one(
             run_dir,
             {
                 "pass_id": pass_id,
-                "rescored_at": datetime.utcnow().isoformat(timespec="seconds") + "Z",
+                "rescored_at": datetime.now(UTC).isoformat(timespec="seconds"),
                 "parser_source": parser_source,
                 "parser_options": dict(parser_options or {}),
                 "metrics": dict(evaluation.scalar_metrics),
@@ -452,7 +452,7 @@ def _parser_fn_repr(fn: Callable[..., Any] | None) -> str | None:
 
 
 def _utcnow_compact() -> str:
-    return datetime.utcnow().strftime("rescore-%Y%m%dT%H%M%S")
+    return datetime.now(UTC).strftime("rescore-%Y%m%dT%H%M%S")
 
 
 # Suppress an unused-import warning for asdict; kept for future expansion.
