@@ -18,7 +18,6 @@ so the audit trail is preserved.
 
 from __future__ import annotations
 
-import hashlib
 import json
 from collections.abc import Callable, Mapping, Sequence
 from dataclasses import asdict, dataclass, field
@@ -339,27 +338,11 @@ def _utcnow() -> str:
     return datetime.now(UTC).isoformat(timespec="seconds")
 
 
-def hash_file(path: Path | None) -> str | None:
-    """Return the sha256 of a file's bytes, or ``None`` when unavailable."""
-
-    if path is None:
-        return None
-    p = Path(path)
-    if not p.is_file():
-        return None
-    h = hashlib.sha256()
-    with p.open("rb") as fh:
-        for chunk in iter(lambda: fh.read(8192), b""):
-            h.update(chunk)
-    return f"sha256:{h.hexdigest()}"
-
-
 __all__ = [
     "DatasetProvenance",
     "ParserProvenance",
     "ToolProvenance",
     "append_rescore_entry",
-    "hash_file",
     "initialize_trial_record",
     "load_trial_record",
     "parser_fn_repr",
