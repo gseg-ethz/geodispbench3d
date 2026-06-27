@@ -24,7 +24,7 @@ from __future__ import annotations
 import importlib
 import logging
 from collections.abc import Callable, Iterable, Mapping, Sequence
-from dataclasses import asdict, dataclass
+from dataclasses import dataclass
 from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
@@ -453,10 +453,6 @@ def _parser_fn_repr(fn: Callable[..., Any] | None) -> str | None:
 
 def _utcnow_compact() -> str:
     return datetime.now(UTC).strftime("rescore-%Y%m%dT%H%M%S")
-
-
-# Suppress an unused-import warning for asdict; kept for future expansion.
-_ = asdict
 
 
 __all__ = [
