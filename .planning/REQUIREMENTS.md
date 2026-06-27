@@ -23,7 +23,7 @@ Requirements for this milestone. Each maps to roadmap phases.
 
 ### CLI Hardening
 
-- [ ] **CLI-01**: The package CLI (`run`/`rescore`/`analyze`/`dashboard`/`list-metrics`) has validated argument handling and tested error/exit-code paths
+- [x] **CLI-01**: The package CLI (`run`/`rescore`/`analyze`/`dashboard`/`list-metrics`) has validated argument handling and tested error/exit-code paths
 - [ ] **CLI-02**: `CliToolAdapter` subprocess invocation has a documented contract and robust failure handling (nonzero exit, missing outputs, timeouts)
 - [ ] **CLI-03**: The F2S3 `conda-run` integration verifies env/binary presence and surfaces failures clearly
 - [ ] **CLI-04**: The hardened CLI behaviors are covered by tests
@@ -87,7 +87,7 @@ Which phases cover which requirements. Updated during roadmap creation.
 | FIX-02 | Phase 2 | Complete |
 | FIX-03 | Phase 2 | Complete |
 | FIX-04 | Phase 2 | Complete |
-| CLI-01 | Phase 3 | Pending |
+| CLI-01 | Phase 3 | Complete |
 | CLI-02 | Phase 3 | Pending |
 | CLI-03 | Phase 3 | Pending |
 | CLI-04 | Phase 3 | Pending |

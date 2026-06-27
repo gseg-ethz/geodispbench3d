@@ -98,7 +98,7 @@ Decimal phases appear between their surrounding integers in numeric order.
 
 **Open question for Phase 3 discussion:** F2S3 binary in-env vs subprocess/`conda-run` — **resolved (CONTEXT D-01): document both, default `conda run`** (F2S3 stays the subprocess + env-isolation showcase; in-env override documented).
 
-**Plans**: 1/4 plans executed
+**Plans**: 2/4 plans executed
 
 **Wave 1**
 
@@ -106,7 +106,7 @@ Decimal phases appear between their surrounding integers in numeric order.
 
 **Wave 2** *(blocked on 03-01)*
 
-- [ ] 03-02-PLAN.md — CLI surface: rescore subcommand split (D-09), 0/1/2 exit-code taxonomy + F-06 fix, clean-error wrapper (D-11), `--timeout` wiring
+- [x] 03-02-PLAN.md — CLI surface: rescore subcommand split (D-09), 0/1/2 exit-code taxonomy + F-06 fix, clean-error wrapper (D-11), `--timeout` wiring
 
 **Wave 3** *(blocked on 03-01 + 03-02)*
 
@@ -156,6 +156,6 @@ Decimal phases appear between their surrounding integers in numeric order.
 |-------|----------------|--------|-----------|
 | 1. Code-Health Audit | 2/2 | Complete    | 2026-06-26 |
 | 2. Targeted Fixes | 7/7 | Complete    | 2026-06-27 |
-| 3. CLI Hardening | 1/4 | In Progress|  |
+| 3. CLI Hardening | 2/4 | In Progress|  |
 | 4. Licensing, Metadata & Packaging | 0/? | Not started | - |
 | 5. CI/CD & Release | 0/? | Not started | - |
