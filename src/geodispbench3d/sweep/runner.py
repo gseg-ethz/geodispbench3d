@@ -63,8 +63,8 @@ class SweepRunSummary:
 
     ``non_fatal_failures`` is the count of swallowed fail-soft failures across
     the whole sweep (per-case evaluation skips, provenance-stamp / prediction-
-    cache / run-hash write failures), surfaced as the CLI's aggregate
-    "N non-fatal failures" line (F-08).
+    cache / run-hash / trial-summary write failures), surfaced as the CLI's
+    aggregate "N non-fatal failures" line (F-08).
     """
 
     best_trial: Any
@@ -426,6 +426,7 @@ class AxSweepRunner:
             objective_cases_finite,
             objective_cases_total,
             aggregated.get(objective),
+            diagnostics=diag,
         )
         return aggregated, objective_cases_finite, objective_cases_total
 
@@ -437,13 +438,16 @@ class AxSweepRunner:
         objective_cases_finite: int,
         objective_cases_total: int,
         aggregated_objective: float | None,
+        *,
+        diagnostics: PassDiagnostics,
     ) -> None:
         """Make objective-specific partial-case failure visible (F-05).
 
         Emits a per-trial log line and writes a dedicated trial-level summary
         artifact — both OFF the Ax objective payload. The artifact write is
-        fail-soft: it can never fail a trial (02-05 adds the non-fatal counter
-        to this site).
+        fail-soft: it can never fail a trial, and a swallowed write failure is
+        recorded into the pass-wide ``diagnostics`` as ``"trial_summary"`` so it
+        rides out on ``SweepRunSummary.non_fatal_failures`` (F-08).
         """
 
         if objective_cases_finite < objective_cases_total:
@@ -478,12 +482,13 @@ class AxSweepRunner:
                     "aggregated_objective": aggregated_objective,
                 },
             )
-        except Exception:  # pragma: no cover - never fail a trial on summary write
+        except Exception:  # never fail a trial on summary write
             self._logger.warning(
                 "Unable to write trial-level summary for trial %s",
                 ax_trial_index,
                 exc_info=True,
             )
+            diagnostics.add("trial_summary")
 
     def _record_run_hash(self, run_hash: str) -> bool:
         """Append a run hash to the trial log; return ``False`` on a write failure.

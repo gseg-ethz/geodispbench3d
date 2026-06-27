@@ -541,6 +541,40 @@ def test_f08_cache_write_failure_counted_and_run_completes(
     assert result.non_fatal_failures == 1
 
 
+def test_f08_trial_summary_write_failure_counted_and_run_completes(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """A failing F-05 trial-summary write is swallowed but counted (WR-01 / F-08).
+
+    write_trial_summary is monkeypatched to raise OSError (the mkdir/open/replace
+    can fail on a read-only results root). The trial must still complete, Ax must
+    still get its scalar, and the swallowed failure must surface as exactly one
+    SweepRunSummary.non_fatal_failures (previously it was swallowed AND invisible).
+    """
+
+    suite = _bootstrap_suite(tmp_path, ["only"])
+    adapter = StubAdapter(run_root=tmp_path / "out", predictions={"only": _PRED_ERR_04})
+    runner, fake = _make_runner(monkeypatch, adapter)
+
+    def boom_summary(*_args: Any, **_kwargs: Any) -> Any:
+        raise OSError("read-only results root")
+
+    # write_trial_summary is imported into the runner module namespace, so the
+    # bound name to patch is geodispbench3d.sweep.runner.write_trial_summary.
+    monkeypatch.setattr("geodispbench3d.sweep.runner.write_trial_summary", boom_summary)
+
+    result = runner.run_with_suite(suite=suite, max_trials=1)
+
+    # Fail-soft: the trial still completed and Ax still got its scalar.
+    assert isinstance(result, SweepRunSummary)
+    assert len(fake.completed) == 1
+    assert fake.failures == []
+    assert result.objective_cases_finite == 1
+    assert result.objective_cases_total == 1
+    # WR-01 / F-08: exactly one swallowed trial-summary write failure was counted.
+    assert result.non_fatal_failures == 1
+
+
 def test_f08_clean_sweep_has_zero_non_fatal_failures(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
