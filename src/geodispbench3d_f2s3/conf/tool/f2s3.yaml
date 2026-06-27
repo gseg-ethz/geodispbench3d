@@ -12,6 +12,14 @@ id: f2s3
 kind: cli
 entry: conda run -n f2s3-dev312 f2s3
 
+# Surfaced by the CliToolAdapter preflight if the f2s3-dev312 env (or conda
+# itself) cannot be resolved before the first trial.
+remediation: >-
+  F2S3 runs in its own conda env. Create it and install F2S3, then re-run:
+  `conda create -n f2s3-dev312 python=3.12 && conda run -n f2s3-dev312 pip install
+  <f2s3>`. Verify with `conda run -n f2s3-dev312 f2s3 --help`.
+help_url: https://github.com/gseg-ethz/F2S3_pc_deformation_monitoring
+
 execution:
   mode: subprocess
   in_process_safe: false

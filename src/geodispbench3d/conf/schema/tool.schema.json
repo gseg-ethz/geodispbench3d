@@ -8,6 +8,14 @@
     "id": {"type": "string"},
     "kind": {"enum": ["cli", "python_callable", "callable", "custom", "factory"]},
     "entry": {"type": "string"},
+    "remediation": {
+      "type": "string",
+      "description": "Operator-facing guidance surfaced in a ToolPreflightError when the env/binary cannot be resolved before trial 0."
+    },
+    "help_url": {
+      "type": "string",
+      "description": "Reference URL appended to a ToolPreflightError message (e.g. the tool's install docs)."
+    },
     "execution": {
       "type": "object",
       "properties": {

@@ -156,6 +156,13 @@ def _build_cli_adapter(raw: Mapping[str, Any], yaml_path: Path) -> CliToolAdapte
     timeout_seconds = execution_raw.get("timeout_seconds")
     timeout = float(timeout_seconds) if timeout_seconds is not None else None
 
+    # Operator-facing preflight guidance (F-16): surfaced inside a
+    # ToolPreflightError when the env/binary cannot be resolved before trial 0.
+    remediation_raw = raw.get("remediation")
+    help_url_raw = raw.get("help_url")
+    remediation = str(remediation_raw) if remediation_raw is not None else None
+    help_url = str(help_url_raw) if help_url_raw is not None else None
+
     return CliToolAdapter(
         invocation=spec,
         outputs_from=outputs_from,
@@ -165,6 +172,8 @@ def _build_cli_adapter(raw: Mapping[str, Any], yaml_path: Path) -> CliToolAdapte
         figures_glob=outputs_raw.get("figures_glob"),
         env=outputs_raw.get("env"),
         timeout=timeout,
+        remediation=remediation,
+        help_url=help_url,
     )
 
 
