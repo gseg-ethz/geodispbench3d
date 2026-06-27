@@ -1,0 +1,744 @@
+"""F-20 characterization net for ``geodispbench3d.sweep.runner``.
+
+This test pins the CURRENT observable behavior of :class:`AxSweepRunner` so the
+F-01 / F-13 / F-05 / F-08 changes in later waves land against a deterministic,
+Ax-free safety net. It is a characterization (regression) test: every
+assertion encodes today's behavior of the UNMODIFIED runner, not an aspiration.
+
+Harness design (mirrors ``tests/core/test_rescore.py``):
+
+* ``FakeAxClient`` — a 5-method duck-typed stand-in for ``ax_client.AxClient``.
+  It is installed by monkeypatching ``geodispbench3d.sweep.runner.AxClient``
+  BEFORE the runner is constructed, because the runner calls ``AxClient(...)``
+  unconditionally in ``__init__`` (runner.py:69). ``create_experiment`` carries
+  an EXPLICIT keyword signature (``parameters``, ``name``, ``objective_name``,
+  ``minimize``) so the runner's ``inspect.signature`` dispatch (runner.py:76-136)
+  exercises the real ``parameters`` / ``objective_name`` / ``minimize`` branch
+  rather than the unsupported-signature fallback.
+* ``StubAdapter`` — a ``ToolAdapter`` returning a canned ``TrialResult`` whose
+  per-case ``prediction`` is supplied by the test, and which records that its
+  ``prepare`` / ``teardown`` lifecycle hooks ran.
+* An inline-YAML suite built in ``tmp_path`` (one ``runner_stub_pkg:parse``
+  parser that simply echoes the adapter's canned prediction).
+
+No real ``AxClient`` is used (heavy + nondeterministic). No literal ``"Z"``
+timestamp suffix is asserted anywhere — F-09 will switch isoformat output to
+``+00:00`` (see 02-RESEARCH Pitfall 2).
+"""
+
+from __future__ import annotations
+
+import argparse
+import json
+import logging
+import sys
+import textwrap
+from collections.abc import Mapping
+from pathlib import Path
+from types import SimpleNamespace
+from typing import Any
+
+import pytest
+
+from geodispbench3d.metrics.registry import MetricRegistry
+from geodispbench3d.suite.loader import load_suite
+from geodispbench3d.sweep import runner as runner_mod
+from geodispbench3d.sweep.parameters import SweepConfig, SweepParameter, build_parameter_specs
+from geodispbench3d.sweep.runner import AxSweepRunner, SweepRunSummary, _normalize_trial_data
+from geodispbench3d.tool.base import ToolAdapter, TrialOutputs, TrialRequest, TrialResult
+
+# ---------------------------------------------------------------------------
+# Fakes / stubs
+# ---------------------------------------------------------------------------
+
+
+class FakeAxClient:
+    """Deterministic, Ax-free stand-in for the five methods the runner uses."""
+
+    def __init__(self, *, verbose_logging: bool = False, **_: Any) -> None:
+        self.verbose_logging = verbose_logging
+        self.created_with: dict[str, Any] | None = None
+        self.next_trial_calls = 0
+        self.completed: list[dict[str, Any]] = []
+        self.failures: list[int] = []
+        self.best_sentinel = SimpleNamespace(label="best-trial")
+
+    def create_experiment(
+        self,
+        *,
+        parameters: Any = None,
+        name: str | None = None,
+        objective_name: str | None = None,
+        minimize: bool | None = None,
+        **kwargs: Any,
+    ) -> None:
+        # Explicit keyword names so the runner's inspect.signature dispatch
+        # (runner.py:84-136) takes the real ``parameters`` / ``objective_name``
+        # / ``minimize`` branch. A bare *args/**kwargs fake would fail that
+        # parameter-name detection and silently skip the branch under test.
+        self.created_with = {
+            "parameters": parameters,
+            "name": name,
+            "objective_name": objective_name,
+            "minimize": minimize,
+        }
+
+    def get_next_trial(self) -> tuple[int, dict[str, Any]]:
+        index = self.next_trial_calls
+        self.next_trial_calls += 1
+        return index, {"alpha": 0.5}
+
+    def complete_trial(self, *, trial_index: int, raw_data: Any) -> None:
+        self.completed.append({"trial_index": trial_index, "raw_data": raw_data})
+
+    def log_trial_failure(self, *, trial_index: int) -> None:
+        self.failures.append(trial_index)
+
+    def get_best_trial(self) -> Any:
+        return self.best_sentinel
+
+
+class StubAdapter(ToolAdapter):
+    """ToolAdapter returning a per-case canned prediction via outputs.extras."""
+
+    id = "stub-adapter"
+    in_process_safe = True
+
+    def __init__(self, *, run_root: Path, predictions: Mapping[str, list[dict[str, Any]]]) -> None:
+        self._run_root = run_root
+        self._predictions = predictions
+        self.prepare_called = False
+        self.teardown_called = False
+        self.run_dirs: dict[str, Path] = {}
+        self._counter = 0
+
+    def prepare(self) -> None:
+        self.prepare_called = True
+
+    def teardown(self) -> None:
+        self.teardown_called = True
+
+    def run_trial(self, request: TrialRequest) -> TrialResult:
+        case = request.case_name or "no-case"
+        self._counter += 1
+        run_dir = self._run_root / f"run-{case}-{self._counter}"
+        run_dir.mkdir(parents=True, exist_ok=True)
+        self.run_dirs[case] = run_dir
+        per_point = list(self._predictions.get(case, []))
+        outputs = TrialOutputs(run_dir=run_dir, extras={"prediction": {"per_point": per_point}})
+        return TrialResult(outputs=outputs, scalar_metrics={}, duration_seconds=0.01)
+
+
+# ---------------------------------------------------------------------------
+# Suite bootstrap (inline YAML in tmp_path, mirrors test_rescore.py)
+# ---------------------------------------------------------------------------
+
+
+def _bootstrap_suite(tmp_path: Path, case_names: list[str]) -> Any:
+    """Build a minimal multi-case suite. Each case GT is one point P:(0,0,0)->(1,0,0)."""
+
+    # Per-case ground-truth CSV: single labeled point, movement (1,0,0), |v|=1.
+    for case in case_names:
+        (tmp_path / f"gt_{case}.csv").write_text("label,x1,y1,z1,x2,y2,z2\nP,0,0,0,1,0,0\n")
+
+    cases_yaml = "".join(
+        textwrap.dedent(f"""\
+          - name: {case}
+            scans: []
+            ground_truth: {{kind: point_displacements, path: gt_{case}.csv}}
+        """)
+        for case in case_names
+    )
+    (tmp_path / "dataset.yaml").write_text("id: stub-dataset\ncases:\n" + cases_yaml)
+
+    (tmp_path / "metrics.yaml").write_text(
+        textwrap.dedent("""\
+        objective_metrics:
+          - id: median_displacement_error
+            fn: geodispbench3d.metrics.builtins:median_displacement_error
+            needs: [prediction, ground_truth]
+            gt_kinds: [point_displacements]
+        record_metrics:
+          - id: per_point
+            fn: geodispbench3d.metrics.builtins:per_point_displacement_record
+            needs: [prediction, ground_truth, case_meta, trial_meta]
+            gt_kinds: [point_displacements]
+        """)
+    )
+
+    # Stub parser package: echo the adapter's canned prediction from extras.
+    # Distinct name from test_rescore's ``stub_pkg`` so the two modules never
+    # collide in sys.modules (import-cache cross-contamination).
+    pkg_dir = tmp_path / "runner_stub_pkg"
+    pkg_dir.mkdir()
+    (pkg_dir / "__init__.py").write_text(
+        "def parse(*, outputs, ground_truth, options=None, **_):\n"
+        "    return outputs.extras.get('prediction', {'per_point': []})\n"
+    )
+    if str(tmp_path) not in sys.path:
+        sys.path.insert(0, str(tmp_path))
+
+    (tmp_path / "tool.yaml").write_text(
+        textwrap.dedent("""\
+        id: stub-tool
+        kind: cli
+        entry: /bin/true
+        invocation: {style: argparse}
+        output_parser:
+          fn: runner_stub_pkg:parse
+          options: {}
+        """)
+    )
+    suite_yaml = tmp_path / "suite.yaml"
+    suite_yaml.write_text(
+        textwrap.dedent("""\
+        id: stub-suite
+        tool: tool.yaml
+        dataset: dataset.yaml
+        metrics: metrics.yaml
+        search:
+          max_trials: 2
+          sobol_trials: 1
+          objective: median_displacement_error
+          minimize: true
+        results:
+          run_dir_root: runs
+          predictions_root: pcache
+        """)
+    )
+    return load_suite(suite_yaml)
+
+
+def _make_runner(
+    monkeypatch: pytest.MonkeyPatch, adapter: ToolAdapter
+) -> tuple[AxSweepRunner, FakeAxClient]:
+    """Install FakeAxClient BEFORE construction, then build the runner over it."""
+
+    monkeypatch.setattr(runner_mod, "AxClient", FakeAxClient)
+    sweep_config = SweepConfig(
+        parameters=[
+            SweepParameter(name="alpha", kind="range", value_type="float", lower=0.0, upper=1.0)
+        ],
+        max_trials=2,
+        sobol_trials=1,
+        objective_name="median_displacement_error",
+        minimize=True,
+    )
+    parameter_specs = build_parameter_specs(sweep_config)
+    runner = AxSweepRunner(
+        adapter=adapter,
+        sweep_config=sweep_config,
+        parameter_specs=parameter_specs,
+        objective_name="median_displacement_error",
+        minimize=True,
+    )
+    fake = runner._ax  # the FakeAxClient the constructor built
+    assert isinstance(fake, FakeAxClient)
+    return runner, fake
+
+
+# ---------------------------------------------------------------------------
+# Task 1: trial loop + adapter teardown + _normalize_trial_data shapes
+# ---------------------------------------------------------------------------
+
+
+def test_create_experiment_dispatch_takes_named_branch(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """The runner's inspect.signature dispatch routes through the named branch."""
+
+    adapter = StubAdapter(run_root=tmp_path / "out", predictions={})
+    _runner, fake = _make_runner(monkeypatch, adapter)
+
+    assert fake.created_with is not None
+    assert fake.created_with["objective_name"] == "median_displacement_error"
+    assert fake.created_with["minimize"] is True
+    assert fake.created_with["name"] == "geodispbench3d_sweep"
+    # The parameter specs flowed through the ``parameters=`` keyword branch.
+    assert isinstance(fake.created_with["parameters"], list)
+    assert fake.created_with["parameters"][0]["name"] == "alpha"
+
+
+def test_trial_loop_happy_path_and_teardown(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """N trials flow get_next_trial -> executor -> complete_trial; teardown runs."""
+
+    suite = _bootstrap_suite(tmp_path, ["only"])
+    adapter = StubAdapter(
+        run_root=tmp_path / "out",
+        predictions={"only": [{"label": "P", "vector": [1.4, 0.0, 0.0]}]},
+    )
+    runner, fake = _make_runner(monkeypatch, adapter)
+
+    result = runner.run_with_suite(suite=suite, max_trials=3)
+
+    # Prepare ran once before the loop; teardown ran via the finally even on
+    # the all-success path (runner.py:218-219).
+    assert adapter.prepare_called is True
+    assert adapter.teardown_called is True
+
+    # Three trials, three completions, zero failures.
+    assert fake.next_trial_calls == 3
+    assert len(fake.completed) == 3
+    assert fake.failures == []
+
+    # Each completion carried the aggregated scalar dict (single-case
+    # short-circuit -> that case's objective, error |1.4 - 1| = 0.4).
+    for entry in fake.completed:
+        assert "median_displacement_error" in entry["raw_data"]
+        assert entry["raw_data"]["median_displacement_error"] == pytest.approx(0.4)
+
+    # F-05: run_with_suite now returns a SweepRunSummary; get_best_trial's
+    # return propagates via .best_trial. All three single-case trials are finite.
+    assert isinstance(result, SweepRunSummary)
+    assert result.best_trial is fake.best_sentinel
+    assert result.objective_name == "median_displacement_error"
+    assert result.objective_cases_finite == 3
+    assert result.objective_cases_total == 3
+
+
+def test_normalize_trial_data_tuple_int_dict() -> None:
+    """The (int, dict) tuple shape -> (index, params)."""
+
+    index, params = _normalize_trial_data((7, {"alpha": 0.25}))
+    assert index == 7
+    assert params == {"alpha": 0.25}
+
+
+def test_normalize_trial_data_object_attributes() -> None:
+    """Objects exposing .trial_index / .parameters are normalized.
+
+    The runner walks the items of the trial-data tuple; one item carries
+    ``.trial_index`` (runner.py:393) and the other ``.parameters``
+    (runner.py:399).
+    """
+
+    ti_obj = SimpleNamespace(trial_index=3)
+    params_obj = SimpleNamespace(parameters={"alpha": 0.9})
+    index, params = _normalize_trial_data((ti_obj, params_obj))
+    assert index == 3
+    assert params == {"alpha": 0.9}
+
+
+def test_normalize_trial_data_unparseable_raises_type_error() -> None:
+    """Input the runner cannot resolve to (index, params) raises TypeError."""
+
+    with pytest.raises(TypeError):
+        _normalize_trial_data(object())
+
+
+# ---------------------------------------------------------------------------
+# Task 2: cross-case aggregation, partial-failure NaN path, provenance stamping
+# ---------------------------------------------------------------------------
+
+# Predictions chosen so the objective (median_displacement_error vs GT |v|=1)
+# is the exact error of the single labeled point P:
+#   vector (1.4,0,0) -> error 0.4 ; (1.6,0,0) -> error 0.6 ; [] -> NaN.
+_PRED_ERR_04 = [{"label": "P", "vector": [1.4, 0.0, 0.0]}]
+_PRED_ERR_06 = [{"label": "P", "vector": [1.6, 0.0, 0.0]}]
+_PRED_NAN: list[dict[str, Any]] = []  # no labeled points -> metric returns NaN
+
+
+def test_single_case_aggregation_short_circuits(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """One case -> _evaluate_across_cases returns that case's scalar dict unchanged."""
+
+    suite = _bootstrap_suite(tmp_path, ["solo"])
+    adapter = StubAdapter(run_root=tmp_path / "out", predictions={"solo": _PRED_ERR_04})
+    runner, _fake = _make_runner(monkeypatch, adapter)
+
+    aggregated, finite, total = runner._evaluate_across_cases(
+        {"alpha": 0.5}, list(suite.dataset.cases), suite, MetricRegistry(), 0, None
+    )
+
+    assert set(aggregated) == {"median_displacement_error"}
+    assert aggregated["median_displacement_error"] == pytest.approx(0.4)
+    assert (finite, total) == (1, 1)
+
+
+def test_multi_case_aggregation_means_finite_values(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Multi-case all-finite -> per-key mean across cases (0.4, 0.6 -> 0.5)."""
+
+    suite = _bootstrap_suite(tmp_path, ["c1", "c2"])
+    adapter = StubAdapter(
+        run_root=tmp_path / "out",
+        predictions={"c1": _PRED_ERR_04, "c2": _PRED_ERR_06},
+    )
+    runner, _fake = _make_runner(monkeypatch, adapter)
+
+    aggregated, finite, total = runner._evaluate_across_cases(
+        {"alpha": 0.5}, list(suite.dataset.cases), suite, MetricRegistry(), 0, None
+    )
+
+    # All-finite multi-case mean is unchanged from pre-F-05 (0.4, 0.6 -> 0.5).
+    assert aggregated["median_displacement_error"] == pytest.approx(0.5)
+    assert (finite, total) == (2, 2)
+
+
+def test_multi_case_partial_failure_ignores_nan_survivor_mean(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Partial failure: one NaN case is dropped; mean is taken over finite survivors.
+
+    REGRESSION ANCHOR: this pins the NaN-ignoring-mean math, which F-05 keeps
+    byte-for-byte unchanged. F-05 (plan 02-03) EXTENDED this path so that the
+    objective-specific finite/total counts are now RETURNED (the
+    partial-failure signal that was previously invisible); F-08 (plan 02-05)
+    will extend it further. The mean value below is the pre-F-05 contract.
+    """
+
+    suite = _bootstrap_suite(tmp_path, ["good", "bad"])
+    adapter = StubAdapter(
+        run_root=tmp_path / "out",
+        predictions={"good": _PRED_ERR_04, "bad": _PRED_NAN},
+    )
+    runner, _fake = _make_runner(monkeypatch, adapter)
+
+    aggregated, finite, total = runner._evaluate_across_cases(
+        {"alpha": 0.5}, list(suite.dataset.cases), suite, MetricRegistry(), 0, None
+    )
+
+    # The NaN survivor is silently dropped FROM THE MEAN; the mean is the good
+    # case alone (math unchanged). F-05 now also surfaces that a case failed.
+    import math
+
+    value = aggregated["median_displacement_error"]
+    assert not math.isnan(value)
+    assert value == pytest.approx(0.4)
+    # F-05: partial failure is no longer invisible — finite < total.
+    assert finite == total - 1
+    assert (finite, total) == (1, 2)
+
+
+def test_provenance_blocks_stamped_into_summary_json(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """A healthy run stamps tool/dataset/parser provenance into summary.json."""
+
+    suite = _bootstrap_suite(tmp_path, ["solo"])
+    adapter = StubAdapter(run_root=tmp_path / "out", predictions={"solo": _PRED_ERR_04})
+    runner, _fake = _make_runner(monkeypatch, adapter)
+
+    runner._evaluate_across_cases(
+        {"alpha": 0.5}, list(suite.dataset.cases), suite, MetricRegistry(), 0, None
+    )
+
+    summary_path = adapter.run_dirs["solo"] / "ax_trial" / "summary.json"
+    assert summary_path.is_file()
+    record = json.loads(summary_path.read_text(encoding="utf-8"))
+
+    assert record["tool"]["id"] == "stub-tool"
+    assert record["dataset"]["id"] == "stub-dataset"
+    assert record["dataset"]["case"] == "solo"
+    assert "parse" in record["parser"]["fn"]
+
+
+# ---------------------------------------------------------------------------
+# Task 3 (F-05): objective-specific finite-case signal surfaced OFF the Ax
+# objective via per-trial log line + trial-level artifact + SweepRunSummary.
+# ---------------------------------------------------------------------------
+
+
+def test_f05_partial_failure_surfaced_off_ax_objective(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    caplog: pytest.LogCaptureFixture,
+) -> None:
+    """F-05: a multi-case one-NaN trial surfaces objective_cases_finite/total
+    three ways (log line, trial-level artifact, SweepRunSummary), and the
+    signal is ABSENT from the Ax complete_trial(raw_data=...) payload."""
+
+    suite = _bootstrap_suite(tmp_path, ["good", "bad"])
+    adapter = StubAdapter(
+        run_root=tmp_path / "out",
+        predictions={"good": _PRED_ERR_04, "bad": _PRED_NAN},
+    )
+    runner, fake = _make_runner(monkeypatch, adapter)
+
+    with caplog.at_level(logging.WARNING, logger="geodispbench3d.sweep"):
+        result = runner.run_with_suite(suite=suite, max_trials=1)
+
+    # (c) SweepRunSummary carries the across-trial aggregate (one trial here).
+    assert isinstance(result, SweepRunSummary)
+    assert result.best_trial is fake.best_sentinel
+    assert result.objective_name == "median_displacement_error"
+    assert result.objective_cases_finite == 1
+    assert result.objective_cases_total == 2
+
+    # (a) The per-trial log line names the objective + finite/total.
+    assert any(
+        "median_displacement_error" in r.getMessage() and "1/2" in r.getMessage()
+        for r in caplog.records
+    ), [r.getMessage() for r in caplog.records]
+
+    # (b) The dedicated trial-level artifact carries the same signal and is
+    # distinct from the per-case ax_trial/summary.json.
+    assert suite.results.run_dir_root is not None
+    summary_path = suite.results.run_dir_root / "trial_summaries" / "trial_0.json"
+    assert summary_path.is_file()
+    artifact = json.loads(summary_path.read_text(encoding="utf-8"))
+    assert artifact["objective_name"] == "median_displacement_error"
+    assert artifact["objective_cases_finite"] == artifact["objective_cases_total"] - 1
+    assert artifact["objective_cases_finite"] == 1
+    assert artifact["objective_cases_total"] == 2
+    assert artifact["aggregated_objective"] == pytest.approx(0.4)
+
+    # (d) The Ax raw_data payload is UNCHANGED — no finite-case key leaked in,
+    # and the objective itself still flows (survivor mean = good case alone).
+    assert len(fake.completed) == 1
+    raw_data = fake.completed[0]["raw_data"]
+    for forbidden in (
+        "objective_cases_finite",
+        "objective_cases_total",
+        "cases_finite",
+        "cases_total",
+    ):
+        assert forbidden not in raw_data
+    assert raw_data["median_displacement_error"] == pytest.approx(0.4)
+
+
+# ---------------------------------------------------------------------------
+# F-08 (02-05): the sweep pass counts swallowed fail-soft failures into
+# SweepRunSummary.non_fatal_failures while preserving fail-soft control flow.
+# ---------------------------------------------------------------------------
+
+
+def test_f08_cache_write_failure_counted_and_run_completes(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """A failing prediction-cache write is swallowed but counted (F-08).
+
+    The cache write is monkeypatched to raise OSError (NOT a real unwritable
+    filesystem path — platform-dependent per the plan). The trial still
+    completes and the failure surfaces as SweepRunSummary.non_fatal_failures.
+    """
+
+    suite = _bootstrap_suite(tmp_path, ["only"])
+    adapter = StubAdapter(run_root=tmp_path / "out", predictions={"only": _PRED_ERR_04})
+    runner, fake = _make_runner(monkeypatch, adapter)
+
+    def boom_write(*_args: Any, **_kwargs: Any) -> Any:
+        raise OSError("disk full")
+
+    # F-10 (02-06) hoisted write_prediction to runner's module namespace, so the
+    # bound name to patch is geodispbench3d.sweep.runner.write_prediction; the
+    # fail-soft except (OSError, TypeError) then catches the raised OSError.
+    monkeypatch.setattr("geodispbench3d.sweep.runner.write_prediction", boom_write)
+
+    result = runner.run_with_suite(suite=suite, max_trials=1)
+
+    # Fail-soft: the trial still completed and Ax still got its scalar.
+    assert isinstance(result, SweepRunSummary)
+    assert len(fake.completed) == 1
+    assert fake.failures == []
+    assert result.objective_cases_finite == 1
+    assert result.objective_cases_total == 1
+    # F-08: exactly one swallowed cache-write failure was counted.
+    assert result.non_fatal_failures == 1
+
+
+def test_f08_trial_summary_write_failure_counted_and_run_completes(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """A failing F-05 trial-summary write is swallowed but counted (WR-01 / F-08).
+
+    write_trial_summary is monkeypatched to raise OSError (the mkdir/open/replace
+    can fail on a read-only results root). The trial must still complete, Ax must
+    still get its scalar, and the swallowed failure must surface as exactly one
+    SweepRunSummary.non_fatal_failures (previously it was swallowed AND invisible).
+    """
+
+    suite = _bootstrap_suite(tmp_path, ["only"])
+    adapter = StubAdapter(run_root=tmp_path / "out", predictions={"only": _PRED_ERR_04})
+    runner, fake = _make_runner(monkeypatch, adapter)
+
+    def boom_summary(*_args: Any, **_kwargs: Any) -> Any:
+        raise OSError("read-only results root")
+
+    # write_trial_summary is imported into the runner module namespace, so the
+    # bound name to patch is geodispbench3d.sweep.runner.write_trial_summary.
+    monkeypatch.setattr("geodispbench3d.sweep.runner.write_trial_summary", boom_summary)
+
+    result = runner.run_with_suite(suite=suite, max_trials=1)
+
+    # Fail-soft: the trial still completed and Ax still got its scalar.
+    assert isinstance(result, SweepRunSummary)
+    assert len(fake.completed) == 1
+    assert fake.failures == []
+    assert result.objective_cases_finite == 1
+    assert result.objective_cases_total == 1
+    # WR-01 / F-08: exactly one swallowed trial-summary write failure was counted.
+    assert result.non_fatal_failures == 1
+
+
+def test_f08_clean_sweep_has_zero_non_fatal_failures(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """A healthy multi-trial sweep reports zero non-fatal failures (F-08)."""
+
+    suite = _bootstrap_suite(tmp_path, ["only"])
+    adapter = StubAdapter(run_root=tmp_path / "out", predictions={"only": _PRED_ERR_04})
+    runner, _fake = _make_runner(monkeypatch, adapter)
+
+    result = runner.run_with_suite(suite=suite, max_trials=2)
+    assert result.non_fatal_failures == 0
+
+
+# ---------------------------------------------------------------------------
+# Task 3 (F-08): _cmd_sweep surfaces an aggregate "N non-fatal failures" line.
+# ---------------------------------------------------------------------------
+
+
+def test_cli_sweep_emits_non_fatal_failures_line(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, caplog: pytest.LogCaptureFixture
+) -> None:
+    """_cmd_sweep logs the aggregate non-fatal-failure count from the summary.
+
+    AxSweepRunner is replaced with a fake whose run_with_suite returns a
+    SweepRunSummary carrying non_fatal_failures, so the CLI line is exercised
+    without a real Ax sweep (the runner-level counting is covered above)."""
+
+    from geodispbench3d import cli
+
+    suite = _bootstrap_suite(tmp_path, ["only"])
+
+    class _FakeRunner:
+        def __init__(self, **_kwargs: Any) -> None:
+            pass
+
+        def run_with_suite(self, *, suite: Any, max_trials: int, on_record_rows: Any = None) -> Any:
+            return SweepRunSummary(
+                best_trial=None,
+                objective_name="median_displacement_error",
+                objective_cases_finite=1,
+                objective_cases_total=2,
+                non_fatal_failures=3,
+            )
+
+    monkeypatch.setattr("geodispbench3d.sweep.runner.AxSweepRunner", _FakeRunner)
+
+    args = argparse.Namespace(max_trials=1)
+    logger = logging.getLogger("geodispbench3d.cli")
+    with caplog.at_level(logging.INFO, logger="geodispbench3d.cli"):
+        rc = cli._cmd_sweep(args, suite, None, logger)
+
+    assert rc == 0
+    assert any(
+        "non-fatal failures" in r.getMessage() and "3" in r.getMessage() for r in caplog.records
+    ), [r.getMessage() for r in caplog.records]
+
+
+# ---------------------------------------------------------------------------
+# F-03: parser_fn_repr is single-sourced in trial_record.py and renders a
+# byte-identical "module:qualname" key. The __qualname__-dependent rendering
+# is locked for a module-level function, a class method, AND a nested/local
+# closure (whose __qualname__ carries a dotted "<locals>" path), so the
+# provenance/cache key cannot drift between the sweep runner and rescore.
+# ---------------------------------------------------------------------------
+
+
+def _module_level_parser() -> None:  # pragma: no cover - identity probe only
+    return None
+
+
+class _ParserHost:
+    def method_parser(self) -> None:  # pragma: no cover - identity probe only
+        return None
+
+
+def test_parser_fn_repr_byte_identical_across_callable_shapes() -> None:
+    """The shared renderer locks "module:qualname" for all callable shapes (F-03)."""
+
+    from geodispbench3d.sweep.trial_record import parser_fn_repr
+
+    mod = _module_level_parser.__module__
+
+    # (a) module-level function
+    assert parser_fn_repr(_module_level_parser) == f"{mod}:_module_level_parser"
+
+    # (b) class method — __qualname__ carries the class prefix
+    assert parser_fn_repr(_ParserHost.method_parser) == f"{mod}:_ParserHost.method_parser"
+
+    # (c) nested/local closure — __qualname__ carries a dotted "<locals>" path,
+    #     proving the renderer uses __qualname__ (not __name__).
+    def nested_parser() -> None:  # pragma: no cover - identity probe only
+        return None
+
+    rendered = parser_fn_repr(nested_parser)
+    assert rendered is not None
+    assert "<locals>" in rendered
+    assert rendered.endswith(":" + nested_parser.__qualname__)
+    assert rendered == f"{mod}:{nested_parser.__qualname__}"
+
+    # None short-circuits to None.
+    assert parser_fn_repr(None) is None
+
+
+def test_parser_fn_repr_single_source_imported_by_runner_and_rescore() -> None:
+    """runner.py and rescore.py reference the one shared trial_record symbol (F-03)."""
+
+    from geodispbench3d.sweep import rescore as rescore_mod
+    from geodispbench3d.sweep import runner as runner_module
+    from geodispbench3d.sweep.trial_record import parser_fn_repr
+
+    assert runner_module.parser_fn_repr is parser_fn_repr
+    assert rescore_mod.parser_fn_repr is parser_fn_repr
+
+
+# ---------------------------------------------------------------------------
+# F-30: ExecutionConfig.ensure_supported() is a shared, deterministically-
+# raising guard for the v2 EXEC-01 forward-compat fields (parallel_trials /
+# override_tool_mode). It raises (never warn-and-continue) and is invoked from
+# both _cmd_sweep and run_with_suite so a programmatic caller cannot bypass it.
+# The fields are RETAINED (not deleted) — this is the v2 seam.
+# ---------------------------------------------------------------------------
+
+
+def test_execution_config_ensure_supported_passes_on_defaults() -> None:
+    """The shipped defaults (parallel_trials=1, override_tool_mode=None) pass."""
+
+    from geodispbench3d.suite.loader import ExecutionConfig
+
+    ExecutionConfig().ensure_supported()
+    ExecutionConfig(parallel_trials=1, override_tool_mode=None).ensure_supported()
+
+
+def test_execution_config_ensure_supported_raises_on_parallel_trials() -> None:
+    """A non-default parallel_trials raises deterministically (D-09, not warn-only)."""
+
+    from geodispbench3d.suite.loader import ExecutionConfig
+
+    with pytest.raises(NotImplementedError):
+        ExecutionConfig(parallel_trials=2).ensure_supported()
+
+
+def test_execution_config_ensure_supported_raises_on_override_tool_mode() -> None:
+    """A set override_tool_mode raises deterministically (D-09, not warn-only)."""
+
+    from geodispbench3d.suite.loader import ExecutionConfig
+
+    with pytest.raises(NotImplementedError):
+        ExecutionConfig(override_tool_mode="subprocess").ensure_supported()
+
+
+def test_run_with_suite_invokes_guard_bypass_proof(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """run_with_suite calls the shared guard at the top — a programmatic caller
+    of run_with_suite cannot bypass the _cmd_sweep guard (F-30, codex HIGH)."""
+
+    import dataclasses
+
+    from geodispbench3d.suite.loader import ExecutionConfig
+
+    suite = _bootstrap_suite(tmp_path, ["only"])
+    suite = dataclasses.replace(suite, execution=ExecutionConfig(parallel_trials=2))
+    adapter = StubAdapter(run_root=tmp_path / "out", predictions={"only": _PRED_ERR_04})
+    runner, _fake = _make_runner(monkeypatch, adapter)
+
+    with pytest.raises(NotImplementedError):
+        runner.run_with_suite(suite=suite, max_trials=1)

@@ -30,6 +30,38 @@ class SweepParameter:
     is_ordered: bool | None = None
     sort_values: bool | None = None
 
+    @classmethod
+    def from_mapping(cls, entry: Mapping[str, Any]) -> SweepParameter:
+        """Build a :class:`SweepParameter` from a raw YAML mapping.
+
+        Single source of truth for the 11-field coercion that was previously
+        duplicated byte-for-byte across :func:`load_sweep_config`,
+        ``tool.loader._load_hyperparameters``, and the iof3D factory's
+        ``_coerce_hparam``. Centralizing it here means a new field cannot drift
+        across the three sites.
+
+        ``values`` is normalized to a fresh ``list`` (copying tuples/sequences)
+        when present, and left as ``None`` otherwise. The narrowing is done via
+        an explicit local so the type checker sees a ``Sequence[Any] | None``
+        rather than re-reading the mapping twice.
+        """
+
+        raw_values = entry.get("values")
+        values = list(raw_values) if raw_values is not None else None
+        return cls(
+            name=str(entry["name"]),
+            kind=str(entry.get("type", "choice")),
+            value_type=str(entry.get("value_type", "str")),
+            values=values,
+            lower=entry.get("lower"),
+            upper=entry.get("upper"),
+            log_scale=bool(entry.get("log_scale", False)),
+            step=entry.get("step"),
+            activates_on=entry.get("activates_on"),
+            is_ordered=entry.get("is_ordered"),
+            sort_values=entry.get("sort_values"),
+        )
+
 
 @dataclass(frozen=True)
 class SweepConfig:
@@ -53,23 +85,7 @@ def load_sweep_config(cfg: DictConfig | Mapping[str, Any] | None) -> SweepConfig
         data = dict(cfg)
 
     raw_params = data.get("parameters", [])
-    params: list[SweepParameter] = []
-    for entry in raw_params:
-        params.append(
-            SweepParameter(
-                name=str(entry["name"]),
-                kind=str(entry.get("type", "choice")),
-                value_type=str(entry.get("value_type", "str")),
-                values=list(entry.get("values")) if entry.get("values") is not None else None,
-                lower=entry.get("lower"),
-                upper=entry.get("upper"),
-                log_scale=bool(entry.get("log_scale", False)),
-                step=entry.get("step"),
-                activates_on=entry.get("activates_on"),
-                is_ordered=entry.get("is_ordered"),
-                sort_values=entry.get("sort_values"),
-            )
-        )
+    params = [SweepParameter.from_mapping(entry) for entry in raw_params]
 
     search_cfg = data.get("search", {})
     return SweepConfig(
