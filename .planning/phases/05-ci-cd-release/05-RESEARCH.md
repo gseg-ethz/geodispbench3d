@@ -335,6 +335,16 @@ Caller MUST `actions/checkout` before invoking (local composite needs the repo o
 
 ## CI Topology (D-02/D-03) — recommended job + matrix shape
 
+> **⚠ SUPERSEDED (3.12-only amendment, 2026-06-27):** The matrix table, the
+> `include:` block, and the D-08 context list below were written for the original
+> *symmetric 3.11+3.12* reading of D-03. CONTEXT `<planning_amendments>` SUPERSEDES
+> that: the package is **Python 3.12-only**, so the `Test (core, 3.11)` row/axis is
+> **dropped**. The authoritative rendered job set and required-status-check contexts
+> are: `Lint (ruff + pyright)`, `Test (core, 3.12)`, `Test (f2s3, 3.12)`,
+> `Build wheel + install smoke` (+ a non-required blocking `Docs build`). Treat the
+> matrix `include:` as `[{core,3.12}, {f2s3,3.12}]`. The plans (05-04, 05-05) encode
+> the corrected set; this section is retained for provenance only.
+
 **`ci.yml` keeps `name: CI`** (release-please's `workflow_run.workflows: [CI]` depends on this exact string).
 
 | Job (recommended `name:`) | Runs on | Trigger gate | Notes |
@@ -619,9 +629,16 @@ These are explicitly listed in CONTEXT as "USER must provide — not blockers fo
 | A5 | The "few pre-existing core type-narrowing errors" (from ROADMAP) are fixable in-phase without large refactors | Pyright Scoping | genuine 0-error gate (D-01a) slips; enumerate early (Wave 0) to size the work. |
 | A6 | geodispbench3d's GitHub repo name/owner is `gseg-ethz/geodispbench3d` (per pyproject URLs) for ruleset/publisher registration | Rulesets / publish | wrong API targets; confirmed via `[project.urls]` repository field. |
 
-## Open Questions
+## Open Questions (RESOLVED 2026-06-27 — see CONTEXT `<planning_amendments>`)
 
-1. **release-please-action v4 → v5 bump.**
+> All five resolved during `/gsd-plan-phase 5` and encoded in the plans:
+> (1) release-please-action **bumped to v5.0.0** (SHA-pinned);
+> (2) docs use the **modern set** (sphinx ~=8.1 / myst-parser ~=4.0 / sphinx-rtd-theme ~=3.0) under `docs/source/`;
+> (3) D-08 contexts are the **3.12-only** four-context set (no `f2s3 3.11`; in fact no 3.11 at all — package moved to 3.12-only);
+> (4) `Docs build` is **blocking-on-PR but NOT a required status check** until RTD activates post-public;
+> (5) `check_publish_gate.py` **ported** (plus actionlint) as opted-in hardening.
+
+1. **release-please-action v4 → v5 bump.** — RESOLVED: v5.0.0.
    - What we know: PCHandler (mirror) uses v5.0.0; local uses v4; same call shape.
    - What's unclear: any v5 behavior change the author hit.
    - Recommendation: adopt v5.0.0 SHA for mirror fidelity; surface the bump to the user (interactive-mode `[deliberate-informed]` change).

@@ -41,8 +41,8 @@ release-please, branch-protection, and RTD setup are mirrored here unless noted.
   pyright: it is already wired (`pyrightconfig.json`, basic mode), and a mypy
   swap is a disproportionate lift (new dep, config, annotation churn) for a
   pyright-shaped codebase.
-- **D-01a: Make pyright *genuinely* 0-errors by scoping to the tool-agnostic
-  core.** The standing red is dominated by unresolvable `iof3D` / `pchandler` /
+- **D-01a — Make pyright genuinely 0-errors by scoping to the tool-agnostic core.**
+  The standing red is dominated by unresolvable `iof3D` / `pchandler` /
   `pc2img` imports. Per Phase 4, iof3D is **private at go-live**, so CI *cannot*
   `pip install` the `iof3d` extra from a public index — installing-the-extra is
   not an option. Resolution: exclude the `geodispbench3d_iof3d` plugin package
@@ -54,8 +54,8 @@ release-please, branch-protection, and RTD setup are mirrored here unless noted.
   per-job mechanics are a planning detail).
 
 ### CI topology (gate coupling)
-- **D-02: lint and test run in parallel; build `needs: [test]`.** Drop the
-  linear `lint → test → build` chain. Rationale discussed: the chain's *masking*
+- **D-02 — lint and test run in parallel; build gated behind test.**
+  Drop the linear `lint → test → build` chain (build `needs: [test]`). Rationale discussed: the chain's *masking*
   failure (a red lint skipped the whole matrix) was a symptom of the gate being
   *chronically* red — fixed by D-01a. Running lint and test independently means a
   type failure can no longer hide a test regression; gating build behind test
@@ -79,7 +79,7 @@ release-please, branch-protection, and RTD setup are mirrored here unless noted.
     `attestations: false`, `skip-existing: true`, `id-token: write` only).
 
 ### release-please wiring (mirror PCHandler — solves the protected-main token problem)
-- **D-05: `on: workflow_run` after CI, authenticated by the gseg-ethz GitHub App.**
+- **D-05 — workflow_run after CI, authenticated by the gseg-ethz GitHub App.**
   `release-please.yml` triggers `on: workflow_run: workflows: [CI]: types:
   [completed]: branches: [main]`, gated `if: workflow_run.conclusion ==
   'success'`. Authenticates via **`actions/create-github-app-token`** with the
@@ -101,8 +101,8 @@ release-please, branch-protection, and RTD setup are mirrored here unless noted.
   workflows use `@vN` tags). Apply across `ci.yml` + the new workflows.
 
 ### Branch protection (mirror PCHandler — PROT-01)
-- **D-08: Two rulesets, `protect-main` (on `main`) and `protect-develop` (on
-  `develop`).** Mirror PCHandler's `protect-main` + `protect-develop-gsd`
+- **D-08 — Two rulesets, protect-main (on main) and protect-develop (on develop).**
+  Mirror PCHandler's `protect-main` + `protect-develop-gsd`
   rulesets (our dev branch is plain `develop`). Each ruleset rule set:
   - `pull_request` — `required_approving_review_count: 0`, all merge methods
     (solo-dev-friendly; no self-approval deadlock).
