@@ -19,7 +19,7 @@ publishing close the loop.
 Decimal phases appear between their surrounding integers in numeric order.
 
 - [x] **Phase 1: Code-Health Audit** - Read-only audit producing a written findings report that gates all subsequent work (completed 2026-06-26)
-- [ ] **Phase 2: Targeted Fixes** - Apply audit-scoped fixes until the full test and quality-tool suite passes
+- [x] **Phase 2: Targeted Fixes** - Apply audit-scoped fixes until the full test and quality-tool suite passes (completed 2026-06-27)
 - [ ] **Phase 3: CLI Hardening** - Harden all three CLI surfaces; document F2S3 as the canonical CliToolAdapter example
 - [ ] **Phase 4: Licensing, Metadata & Packaging** - Reconcile license, drop Private classifier, untangle packaging deps; resolve open iof3d/pchandler decisions
 - [ ] **Phase 5: CI/CD & Release** - Automate lint/type/test gates, wheel+sdist build, and trusted-publishing release to public PyPI
@@ -59,7 +59,29 @@ Decimal phases appear between their surrounding integers in numeric order.
   3. `SweepParameter` construction is handled by a single source (e.g. `from_mapping` classmethod); `_parser_fn_repr` lives in one shared location, not two
   4. `ruff`, `pyright`, and the full `pytest` suite (core, iof3d, f2s3) pass without errors after every fix lands
 
-**Plans**: TBD
+**Plans**: 7/7 plans complete
+
+**Wave 0** *(test net + pyright baseline — D-04 tests-first)*
+
+- [x] 02-01-PLAN.md — F-20 runner.py characterization net (fake AxClient + stub adapter; the regression anchor)
+- [x] 02-02-PLAN.md — F-21 store + F-22 evaluation failure-path tests + pyright baseline & reusable baseline-diff gate (pyright_gate.py)
+
+**Wave 1** *(blocked on Wave 0)*
+
+- [x] 02-03-PLAN.md — F-01 typed SuiteConfig + F-13 provenance fold + F-05 finite-case surfacing
+- [x] 02-04-PLAN.md — F-02 SweepParameter.from_mapping dedup (parallel; disjoint files)
+
+**Wave 2** *(blocked on 02-03)*
+
+- [x] 02-05-PLAN.md — F-08 narrowed excepts + typed PassDiagnostics + non_fatal_failures on every summary + CLI summary line
+
+**Wave 3** *(blocked on 02-05)*
+
+- [x] 02-06-PLAN.md — F-09/F-10/F-11 mechanical hygiene cluster (timestamps, import hoist, dead asdict)
+
+**Wave 4** *(blocked on 02-04 + 02-06)*
+
+- [x] 02-07-PLAN.md — F-03 parser_fn_repr dedup + F-30 dead-field deletion/guards + final FIX-04 gate
 
 ### Phase 3: CLI Hardening
 
@@ -108,6 +130,8 @@ Decimal phases appear between their surrounding integers in numeric order.
   3. A tagged release triggers OIDC trusted publishing to public PyPI — no stored long-lived tokens are used
   4. release-please is wired end-to-end so version bumps, changelog entries, and PyPI publishes flow automatically from a git tag
 
+**Open question for Phase 5 discussion (raised in Phase 2):** Type-checking strategy — keep `pyright` as the enforced CI type gate, or demote pyright to informative and adopt a strict `mypy` gate (pchandler-style), realigning the CI lint workflow accordingly. Pros/cons to be discussed here; **not pre-decided**. Carried from Phase 2's "pyright is RED at HEAD" finding — see `.planning/phases/02-targeted-fixes/02-RESEARCH.md` Assumption A1 and Phase 2 CONTEXT.md D-13.
+
 **Plans**: TBD
 
 ## Progress
@@ -117,7 +141,7 @@ Decimal phases appear between their surrounding integers in numeric order.
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
 | 1. Code-Health Audit | 2/2 | Complete    | 2026-06-26 |
-| 2. Targeted Fixes | 0/? | Not started | - |
+| 2. Targeted Fixes | 7/7 | Complete    | 2026-06-27 |
 | 3. CLI Hardening | 0/? | Not started | - |
 | 4. Licensing, Metadata & Packaging | 0/? | Not started | - |
 | 5. CI/CD & Release | 0/? | Not started | - |

@@ -50,12 +50,6 @@ class CaseSpec:
     ground_truth: GroundTruthSpec | None = None
     metadata: Mapping[str, Any] = field(default_factory=dict)
 
-    def scan_by_epoch(self, epoch: str) -> ScanSpec:
-        for scan in self.scans:
-            if scan.epoch == epoch:
-                return scan
-        raise KeyError(f"Case {self.name!r} has no scan for epoch {epoch!r}")
-
 
 @dataclass(frozen=True)
 class DatasetSpec:
@@ -64,7 +58,6 @@ class DatasetSpec:
     id: str
     root: Path
     cases: Sequence[CaseSpec]
-    gt_kinds_supported: Sequence[str] = ()
     metadata: Mapping[str, Any] = field(default_factory=dict)
 
     def case(self, name: str) -> CaseSpec:
@@ -99,14 +92,12 @@ def load_dataset(path: str | Path) -> DatasetSpec:
     for case_raw in cases_raw:
         cases.append(_load_case(case_raw, root))
 
-    gt_kinds = raw.get("gt_kinds_supported") or ()
     metadata = raw.get("metadata") or {}
 
     return DatasetSpec(
         id=str(raw.get("id", yaml_path.stem)),
         root=root,
         cases=tuple(cases),
-        gt_kinds_supported=tuple(gt_kinds),
         metadata=dict(metadata),
     )
 

@@ -72,7 +72,7 @@ def build_iof3d_adapter(
         base_cfg = OmegaConf.merge(base_cfg, patch)
 
     app_cfg = _build_app_config(base_cfg)
-    param_defs = [_coerce_hparam(entry) for entry in (hyperparameters or [])]
+    param_defs = [SweepParameter.from_mapping(entry) for entry in (hyperparameters or [])]
 
     return Iof3dCallableAdapter(
         base_config=app_cfg,
@@ -132,22 +132,6 @@ def _to_plain(obj: Any) -> Any:
     if isinstance(obj, (list, tuple)):
         return [_to_plain(v) for v in obj]
     return obj
-
-
-def _coerce_hparam(entry: Mapping[str, Any]) -> SweepParameter:
-    return SweepParameter(
-        name=str(entry["name"]),
-        kind=str(entry.get("type", "choice")),
-        value_type=str(entry.get("value_type", "str")),
-        values=list(entry.get("values")) if entry.get("values") is not None else None,
-        lower=entry.get("lower"),
-        upper=entry.get("upper"),
-        log_scale=bool(entry.get("log_scale", False)),
-        step=entry.get("step"),
-        activates_on=entry.get("activates_on"),
-        is_ordered=entry.get("is_ordered"),
-        sort_values=entry.get("sort_values"),
-    )
 
 
 __all__ = ["build_iof3d_adapter"]

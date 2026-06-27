@@ -11,8 +11,6 @@ metadata:
   description: |
     Mattertal site PRCS scans (Polar Reference Coordinate System) plus the
     shared point-displacement GT. F2S3 consumes the two PLYs directly.
-gt_kinds_supported:
-  - point_displacements
 cases:
   - name: mattertal-2019-2021
     scans:

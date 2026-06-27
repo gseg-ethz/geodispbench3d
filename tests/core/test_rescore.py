@@ -2,10 +2,15 @@
 
 from __future__ import annotations
 
+import argparse
+import logging
 import sys
 import textwrap
 from dataclasses import asdict
+from datetime import datetime
 from pathlib import Path
+
+import pytest
 
 from geodispbench3d.results.predictions_cache import write_prediction
 from geodispbench3d.suite.loader import load_suite
@@ -14,6 +19,7 @@ from geodispbench3d.sweep.trial_record import (
     DatasetProvenance,
     ToolProvenance,
     load_trial_record,
+    read_provenance,
     trial_record_path,
     write_trial_record,
 )
@@ -134,6 +140,13 @@ def test_rescore_default_options(tmp_path: Path) -> None:
     assert len(record["rescore_log"]) == 1
     assert record["rescore_log"][0]["parser_source"] == "suite"
 
+    # F-09: the appended audit timestamp is offset-aware (+00:00, not a manual
+    # "Z") and round-trips through datetime.fromisoformat.
+    rescored_at = record["rescore_log"][0]["rescored_at"]
+    assert not rescored_at.endswith("Z")
+    parsed = datetime.fromisoformat(rescored_at)
+    assert parsed.tzinfo is not None
+
 
 def test_rescore_with_prediction_cache_hit(tmp_path: Path) -> None:
     suite = load_suite(_bootstrap_bench(tmp_path))
@@ -157,6 +170,154 @@ def test_rescore_with_prediction_cache_hit(tmp_path: Path) -> None:
     )
     assert summary.succeeded == 1
     assert summary.cache_hits == 1
+
+
+def test_rescore_default_options_zero_non_fatal_failures(tmp_path: Path) -> None:
+    """A clean rescore pass reports zero non-fatal failures (F-08)."""
+
+    suite = load_suite(_bootstrap_bench(tmp_path))
+    summary = rescore_suite(suite=suite, options=RescoreOptions())
+    assert summary.succeeded == 1
+    assert summary.non_fatal_failures == 0
+
+
+def test_rescore_malformed_rescore_log_is_counted_fail_soft(tmp_path: Path) -> None:
+    """A non-list ``rescore_log`` makes append_rescore_entry raise AttributeError;
+    it is swallowed fail-soft, counted in RescoreSummary.non_fatal_failures, and
+    the run still scores (F-08, corrected exception set OSError/AttributeError/TypeError)."""
+
+    suite = load_suite(_bootstrap_bench(tmp_path))
+
+    # Corrupt the (valid-JSON) summary so rescore_log is a truthy dict, not a
+    # list: append_rescore_entry then does ``{}.append(...)`` -> AttributeError.
+    run_dir = tmp_path / "runs" / "abcdef123456"
+    record_path = trial_record_path(run_dir)
+    record = load_trial_record(record_path)
+    record["rescore_log"] = {"unexpectedly": "a-dict"}
+    write_trial_record(record_path, record)
+
+    summary = rescore_suite(suite=suite, options=RescoreOptions())
+
+    # Fail-soft: the run was still scored despite the append failure.
+    assert summary.total == 1
+    assert summary.succeeded == 1
+    # F-08: the swallowed AttributeError on the append was counted.
+    assert summary.non_fatal_failures == 1
+
+
+def test_cli_rescore_emits_non_fatal_failures_line(
+    tmp_path: Path, caplog: pytest.LogCaptureFixture
+) -> None:
+    """_cmd_rescore surfaces the aggregate non-fatal-failure line (F-08).
+
+    Drives the real _cmd_rescore end-to-end over a run dir whose malformed
+    rescore_log triggers one swallowed AttributeError, and asserts the CLI
+    logs the aggregate count."""
+
+    from geodispbench3d import cli
+
+    suite = load_suite(_bootstrap_bench(tmp_path))
+    run_dir = tmp_path / "runs" / "abcdef123456"
+    record_path = trial_record_path(run_dir)
+    record = load_trial_record(record_path)
+    record["rescore_log"] = {"unexpectedly": "a-dict"}
+    write_trial_record(record_path, record)
+
+    args = argparse.Namespace(
+        max_trials=None,
+        reuse_parser_options=False,
+        use_prediction_cache=False,
+        pass_id=None,
+    )
+    logger = logging.getLogger("geodispbench3d.cli")
+    with caplog.at_level(logging.INFO, logger="geodispbench3d.cli"):
+        cli._cmd_rescore(args, suite, None, logger)
+
+    assert any(
+        "non-fatal failures" in r.getMessage() and "1" in r.getMessage() for r in caplog.records
+    )
+
+
+def test_old_record_with_yaml_hash_still_deserializes(tmp_path: Path) -> None:
+    """An on-disk summary whose ``tool`` block still carries the removed
+    ``yaml_hash`` key deserializes without error (F-30).
+
+    The four dead fields were deleted, but loaders reconstruct provenance via
+    ``.get()``-based extraction, so the now-unknown ``yaml_hash`` key is simply
+    ignored — existing run dirs written before the deletion still load.
+    """
+
+    run_dir = tmp_path / "runs" / "legacyhash"
+    run_dir.mkdir(parents=True)
+    write_trial_record(
+        trial_record_path(run_dir),
+        {
+            "status": "success",
+            "parameters": {"alpha": 0.5},
+            "metrics": {"median_displacement_error": 0.1},
+            "tool": {
+                "id": "legacy-tool",
+                "yaml_path": "/old/tool.yaml",
+                # Removed field still present in the on-disk record:
+                "yaml_hash": "sha256:deadbeef",
+            },
+            "dataset": {"id": "legacy-dataset", "case": "only-case"},
+            "parser": {"fn": "stub_pkg:parse", "options": {}},
+        },
+    )
+
+    tool_prov, dataset_prov, parser_prov = read_provenance(run_dir)
+
+    # No TypeError despite the extra (deleted) key; the live fields survive.
+    assert isinstance(tool_prov, ToolProvenance)
+    assert tool_prov.id == "legacy-tool"
+    assert tool_prov.yaml_path == "/old/tool.yaml"
+    assert not hasattr(tool_prov, "yaml_hash")
+    assert dataset_prov is not None and dataset_prov.id == "legacy-dataset"
+    assert parser_prov is not None and parser_prov.fn == "stub_pkg:parse"
+
+
+def test_load_trial_record_non_utf8_degrades_and_counts(tmp_path: Path) -> None:
+    """A present-but-non-UTF-8 summary.json raises UnicodeDecodeError during the
+    decode; load_trial_record must degrade to {} AND invoke on_non_fatal so the
+    pass-level diagnostics count it rather than the exception aborting the pass
+    (CR-01 / F-08)."""
+
+    run_dir = tmp_path / "runs" / "badutf8"
+    run_dir.mkdir(parents=True)
+    record_path = trial_record_path(run_dir)
+    record_path.write_bytes(b"\xff\xfe\x00bad")  # invalid UTF-8
+
+    counted: list[Exception] = []
+    result = load_trial_record(record_path, on_non_fatal=counted.append)
+
+    assert result == {}
+    assert len(counted) == 1
+    assert isinstance(counted[0], UnicodeDecodeError)
+
+
+def test_rescore_non_utf8_summary_counted_fail_soft(tmp_path: Path) -> None:
+    """A non-UTF-8 summary.json in one run dir must NOT crash rescore_suite: the
+    bad file degrades fail-soft (counted in non_fatal_failures, skipped), and the
+    other run dir still scores (CR-01 / F-08)."""
+
+    suite = load_suite(_bootstrap_bench(tmp_path))
+
+    # Fabricate a second run dir whose summary.json is present but non-UTF-8.
+    bad_dir = tmp_path / "runs" / "badutf8"
+    bad_dir.mkdir(parents=True)
+    trial_record_path(bad_dir).write_bytes(b"\xff\xfe\x00bad")
+
+    summary = rescore_suite(suite=suite, options=RescoreOptions())
+
+    # The pass completed (did not crash) over both run dirs.
+    assert summary.total == 2
+    # The healthy run dir still scored.
+    assert summary.succeeded == 1
+    # The non-UTF-8 file degraded to an empty record -> skipped, and the
+    # swallowed UnicodeDecodeError was counted.
+    assert summary.skipped_no_summary == 1
+    assert summary.non_fatal_failures == 1
 
 
 def test_rescore_skips_failed_runs(tmp_path: Path) -> None:

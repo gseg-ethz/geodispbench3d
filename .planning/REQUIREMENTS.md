@@ -16,10 +16,10 @@ Requirements for this milestone. Each maps to roadmap phases.
 
 ### Fixes
 
-- [ ] **FIX-01**: Findings marked "fix" in the audit are resolved, each as an atomic, reviewed change
-- [ ] **FIX-02**: Dead code and unused bloat identified in the audit is removed
-- [ ] **FIX-03**: Flagged duplication is consolidated to a single source (SweepParameter construction; `_parser_fn_repr`)
-- [ ] **FIX-04**: The full test suite (core/iof3d/f2s3) plus ruff and pyright pass after the fixes land
+- [x] **FIX-01**: Findings marked "fix" in the audit are resolved, each as an atomic, reviewed change
+- [x] **FIX-02**: Dead code and unused bloat identified in the audit is removed
+- [x] **FIX-03**: Flagged duplication is consolidated to a single source (SweepParameter construction; `_parser_fn_repr`)
+- [x] **FIX-04**: The full test suite (core/iof3d/f2s3) plus ruff and pyright pass after the fixes land
 
 ### CLI Hardening
 
@@ -83,10 +83,10 @@ Which phases cover which requirements. Updated during roadmap creation.
 | AUDIT-02 | Phase 1 | Complete |
 | AUDIT-03 | Phase 1 | Complete |
 | AUDIT-04 | Phase 1 | Complete |
-| FIX-01 | Phase 2 | Pending |
-| FIX-02 | Phase 2 | Pending |
-| FIX-03 | Phase 2 | Pending |
-| FIX-04 | Phase 2 | Pending |
+| FIX-01 | Phase 2 | Complete |
+| FIX-02 | Phase 2 | Complete |
+| FIX-03 | Phase 2 | Complete |
+| FIX-04 | Phase 2 | Complete |
 | CLI-01 | Phase 3 | Pending |
 | CLI-02 | Phase 3 | Pending |
 | CLI-03 | Phase 3 | Pending |

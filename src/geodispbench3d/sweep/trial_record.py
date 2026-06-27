@@ -18,11 +18,10 @@ so the audit trail is preserved.
 
 from __future__ import annotations
 
-import hashlib
 import json
-from collections.abc import Mapping, Sequence
+from collections.abc import Callable, Mapping, Sequence
 from dataclasses import asdict, dataclass, field
-from datetime import datetime
+from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
 
@@ -37,14 +36,12 @@ class ToolProvenance:
 
     id: str
     yaml_path: str | None = None
-    yaml_hash: str | None = None  # sha256 of the resolved tool YAML
 
     @classmethod
     def from_yaml_path(cls, tool_id: str, yaml_path: Path | None) -> ToolProvenance:
         return cls(
             id=tool_id,
             yaml_path=str(yaml_path) if yaml_path is not None else None,
-            yaml_hash=hash_file(yaml_path) if yaml_path is not None else None,
         )
 
 
@@ -69,6 +66,26 @@ class ParserProvenance:
     options: Mapping[str, Any] = field(default_factory=dict)
 
 
+def parser_fn_repr(fn: Any) -> str | None:
+    """Render a parser callable as a stable ``"package.module:attr"`` string.
+
+    Single source for the provenance/cache key shared by the sweep runner and
+    the rescore pass — they must agree byte-for-byte or a rescore would write
+    to a different predictions-cache slot than the sweep that produced it.
+    Uses ``__module__`` + ``__qualname__`` (not ``__name__``) so the rendering
+    is stable across module-level functions, methods, and nested/local
+    closures (whose ``__qualname__`` carries a dotted ``<locals>`` path).
+    """
+
+    if fn is None:
+        return None
+    module = getattr(fn, "__module__", None)
+    qualname = getattr(fn, "__qualname__", getattr(fn, "__name__", None))
+    if module and qualname:
+        return f"{module}:{qualname}"
+    return None
+
+
 # ---------------------------------------------------------------------------
 # I/O primitives
 # ---------------------------------------------------------------------------
@@ -80,13 +97,33 @@ def trial_record_path(run_dir: Path) -> Path:
     return out_dir / "summary.json"
 
 
-def load_trial_record(path: Path) -> dict[str, Any]:
+def load_trial_record(
+    path: Path,
+    *,
+    on_non_fatal: Callable[[Exception], None] | None = None,
+) -> dict[str, Any]:
+    """Load a trial summary, degrading to ``{}`` when absent or unreadable.
+
+    An absent file is normal (returns ``{}`` without calling ``on_non_fatal``).
+    A present-but-corrupt summary (bad permissions, malformed JSON) is a
+    fail-soft failure: it still degrades to ``{}``, but when ``on_non_fatal`` is
+    supplied it is invoked with the caught exception so the caller can count it
+    (F-08). Internal callers that read-modify-write (``update_trial_record``,
+    ``append_rescore_entry``, ``read_provenance``) leave it at its default.
+    """
+
     if not path.exists():
         return {}
     try:
         with path.open("r", encoding="utf-8") as fh:
             return json.load(fh)
-    except Exception:
+    except (OSError, json.JSONDecodeError, UnicodeDecodeError) as exc:
+        # UnicodeDecodeError is a sibling of json.JSONDecodeError under
+        # ValueError: a present-but-non-UTF-8 file raises it during the
+        # decode in fh.read(), before any JSON parsing. Catching it keeps the
+        # fail-soft contract (F-08) instead of aborting the whole pass.
+        if on_non_fatal is not None:
+            on_non_fatal(exc)
         return {}
 
 
@@ -95,6 +132,36 @@ def write_trial_record(path: Path, payload: Mapping[str, Any]) -> None:
     with tmp.open("w", encoding="utf-8") as fh:
         json.dump(payload, fh, indent=2, sort_keys=True, default=str)
     tmp.replace(path)
+
+
+def trial_summary_path(results_root: Path, trial_index: int) -> Path:
+    """Path of the dedicated trial-level summary artifact.
+
+    Distinct from the per-case ``<run_dir>/ax_trial/summary.json``: this is a
+    single per-trial JSON under ``<results_root>/trial_summaries/`` carrying the
+    post-aggregation finite-case signal (F-05).
+    """
+
+    out_dir = Path(results_root) / "trial_summaries"
+    out_dir.mkdir(parents=True, exist_ok=True)
+    return out_dir / f"trial_{trial_index}.json"
+
+
+def write_trial_summary(results_root: Path, trial_index: int, payload: Mapping[str, Any]) -> Path:
+    """Atomically write the dedicated trial-level summary artifact.
+
+    Stamps ``recorded_at`` (offset-aware UTC) when the caller has not supplied
+    it, then writes via the same tmp+replace pattern as ``write_trial_record``.
+    """
+
+    path = trial_summary_path(results_root, trial_index)
+    record = dict(payload)
+    record.setdefault("recorded_at", datetime.now(UTC).isoformat(timespec="seconds"))
+    tmp = path.with_suffix(".tmp")
+    with tmp.open("w", encoding="utf-8") as fh:
+        json.dump(record, fh, indent=2, sort_keys=True, default=str)
+    tmp.replace(path)
+    return path
 
 
 def update_trial_record(run_dir: Path, updates: Mapping[str, Any]) -> None:
@@ -238,7 +305,6 @@ def _tool_from_record(record: Mapping[str, Any]) -> ToolProvenance | None:
     return ToolProvenance(
         id=str(block.get("id", "")),
         yaml_path=block.get("yaml_path"),
-        yaml_hash=block.get("yaml_hash"),
     )
 
 
@@ -269,22 +335,7 @@ def _parser_payload(parser: ParserProvenance) -> dict[str, Any]:
 
 
 def _utcnow() -> str:
-    return datetime.utcnow().isoformat(timespec="seconds") + "Z"
-
-
-def hash_file(path: Path | None) -> str | None:
-    """Return the sha256 of a file's bytes, or ``None`` when unavailable."""
-
-    if path is None:
-        return None
-    p = Path(path)
-    if not p.is_file():
-        return None
-    h = hashlib.sha256()
-    with p.open("rb") as fh:
-        for chunk in iter(lambda: fh.read(8192), b""):
-            h.update(chunk)
-    return f"sha256:{h.hexdigest()}"
+    return datetime.now(UTC).isoformat(timespec="seconds")
 
 
 __all__ = [
@@ -292,13 +343,15 @@ __all__ = [
     "ParserProvenance",
     "ToolProvenance",
     "append_rescore_entry",
-    "hash_file",
     "initialize_trial_record",
     "load_trial_record",
+    "parser_fn_repr",
     "read_provenance",
     "store_trial_failure",
     "store_trial_metadata",
     "trial_record_path",
+    "trial_summary_path",
     "update_trial_record",
     "write_trial_record",
+    "write_trial_summary",
 ]

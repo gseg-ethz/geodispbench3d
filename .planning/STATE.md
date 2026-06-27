@@ -2,18 +2,18 @@
 gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
-current_phase: 2
-current_phase_name: Targeted Fixes
-status: "Phase 1 shipped — PR #1"
-stopped_at: Phase 1 context gathered
-last_updated: "2026-06-26T16:20:38.910Z"
-last_activity: 2026-06-26
+current_phase: 3
+current_phase_name: CLI Hardening
+status: "Phase 2 shipped — PR #2"
+stopped_at: Completed 02-03-PLAN.md
+last_updated: "2026-06-27T10:20:46.440Z"
+last_activity: 2026-06-27
 progress:
   total_phases: 5
-  completed_phases: 1
-  total_plans: 2
-  completed_plans: 2
-  percent: 20
+  completed_phases: 2
+  total_plans: 9
+  completed_plans: 9
+  percent: 40
 ---
 
 # Project State
@@ -23,14 +23,14 @@ progress:
 See: .planning/PROJECT.md (updated 2026-06-26)
 
 **Core value:** Nothing is published to PyPI until the codebase is demonstrably lean, correct, well-tested, and its CLI-integration story is sound.
-**Current focus:** Phase 01 — code-health-audit
+**Current focus:** Phase 02 — targeted-fixes
 
 ## Current Position
 
-Phase: 2 — Targeted Fixes
+Phase: 3 — CLI Hardening
 Plan: Not started
-Status: Phase 1 shipped — PR #1
-Last activity: 2026-06-26
+Status: Phase 2 shipped — PR #2
+Last activity: 2026-06-27
 
 Progress: [░░░░░░░░░░] 0%
 
@@ -38,7 +38,7 @@ Progress: [░░░░░░░░░░] 0%
 
 **Velocity:**
 
-- Total plans completed: 2
+- Total plans completed: 9
 - Average duration: -
 - Total execution time: 0 hours
 
@@ -47,6 +47,7 @@ Progress: [░░░░░░░░░░] 0%
 | Phase | Plans | Total | Avg/Plan |
 |-------|-------|-------|----------|
 | 01 | 2 | - | - |
+| 02 | 7 | - | - |
 
 **Recent Trend:**
 
@@ -56,6 +57,13 @@ Progress: [░░░░░░░░░░] 0%
 *Updated after each plan completion*
 | Phase 01 P01 | 10min | 3 tasks | 9 files |
 | Phase 01 P02 | 20min | 2 tasks | 1 files |
+| Phase 02 P01 | 7min | 2 tasks | 1 files |
+| Phase 02 P02 | 55min | 3 tasks | 5 files |
+| Phase 02 P03 | 12min | 3 tasks | 4 files |
+| Phase 02 P04 | 12min | 1 tasks | 4 files |
+| Phase 02 P05 | 15min | 3 tasks | 11 files |
+| Phase 02 P06 | 15min | 3 tasks | 8 files |
+| Phase 02 P07 | 18min | 3 tasks | 12 files |
 
 ## Accumulated Context
 
@@ -70,6 +78,18 @@ Recent decisions affecting current work:
 - [Phase 01]: Audit detectors (vulture 2.16, deptry 0.25.1, radon 6.0.1) installed dev-only into the conda env per human approval; NOT added to pyproject.toml (read-only audit)
 - [Phase ?]: REPORT.md (32 findings F-01..F-32) supersedes CONCERNS.md as the dispositioned Phase 1 deliverable
 - [Phase ?]: 2 Blockers gate public publish (F-26 Private classifier, F-27 README/LICENSE mismatch), routed to Phase 4
+- [Phase ?]: [Phase 02-01]: runner.py coverage measured via 'coverage run -m pytest -p no:cov' (72%, up from 13%); plan's 'pytest --cov' crashes on a torch/pytest-cov early-import conflict in this env
+- [Phase ?]: [Phase 02-01]: F-20 characterization harness (FakeAxClient + StubAdapter) landed; partial-failure NaN survivor-mean pinned as the F-05/F-08 regression anchor
+- [Phase ?]: 02-02: pyright gate baseline is the dev-env capture (1.1.403 + full extras, 21 errors); CI-faithful 1.1.392/.[dev] (16 errors) is a doc-only strict-subset reference
+- [Phase ?]: 02-02: pyright_gate.py uses line-number-independent (file, rule, normalized-message) multiset signatures, replacing raw 'pyright &&' for 02-03/04/05/07
+- [Phase 02-03]: SuiteConfig retype + provenance collapse (F-01/F-13); objective-specific finite-case signal (F-05) via SweepRunSummary + dedicated trial-level artifact, kept off the Ax objective payload — Typed consumers remove 15 attr-defined ignores with no new pyright errors; finite/total is objective-specific (self._objective_name) and surfaced via log + artifact + return, never injected into complete_trial raw_data
+- [Phase 02]: 02-04: SweepParameter coercion single-sourced via from_mapping classmethod (F-02/FIX-03); three sites routed through it, _coerce_hparam removed; net -2 pyright errors (values-list patterns cleared at tool/loader.py + factory.py); from_mapping is a class member, not in __all__
+- [Phase ?]: [Phase 02-05]: F-08 resolved — typed PassDiagnostics threaded through sweep/rescore/analyze; 8 IO excepts narrowed (rescore append corrected to (OSError, AttributeError, TypeError)), 4 plugin-callable boundaries documented-broad; read_prediction/load_trial_record gain on_non_fatal; each CLI summary prints an aggregate 'N non-fatal failures' line; fail-soft flow preserved
+- [Phase ?]: F-09 (02-06): stamp UTC via datetime.now(UTC).isoformat() with no hand-appended Z; helper names _utcnow/_utcnow_compact kept, only the call swapped
+- [Phase ?]: F-10 (02-06): hoisted only internal/stdlib imports in runner.py; Ax stays lazy/guarded; test_imports.py is the authoritative lazy-gating guard. F-08 cache-write test repatched to the hoisted geodispbench3d.sweep.runner.write_prediction binding
+- [Phase ?]: 02-07: F-03 parser_fn_repr single-sourced in sweep/trial_record.py (public, __all__); runner+rescore import it; byte-identity locked across module/method/nested(<locals>) callables so the sweep/rescore cache key cannot drift
+- [Phase ?]: 02-07: F-30 four dead fields deleted (outputs_options, scan_by_epoch, gt_kinds_supported, yaml_hash incl. _tool_from_record deserializer); old yaml_hash records still load; hash_file retained as public util
+- [Phase ?]: 02-07: ExecutionConfig.ensure_supported() raises deterministically (D-09) on non-default parallel_trials/override_tool_mode, called from BOTH _cmd_sweep and run_with_suite (bypass-proof); fields retained; FIX-04 green-gate closed
 
 ### Open Questions (surface at phase discussions)
 
@@ -101,6 +121,6 @@ yet.
 
 ## Session Continuity
 
-Last session: 2026-06-26T15:54:56.049Z
-Stopped at: Phase 1 context gathered
-Resume file: .planning/phases/01-code-health-audit/01-CONTEXT.md
+Last session: 2026-06-27T09:35:52.802Z
+Stopped at: Completed 02-03-PLAN.md
+Resume file: None
