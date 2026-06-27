@@ -1,0 +1,494 @@
+{
+    "version": "1.1.403",
+    "time": "1782548697741",
+    "generalDiagnostics": [
+        {
+            "file": "/scratch/35_geodispbench3d/src/geodispbench3d/__init__.py",
+            "severity": "warning",
+            "message": "\"tool\" is specified in __all__ but is not present in module",
+            "range": {
+                "start": {
+                    "line": 12,
+                    "character": 4
+                },
+                "end": {
+                    "line": 12,
+                    "character": 10
+                }
+            },
+            "rule": "reportUnsupportedDunderAll"
+        },
+        {
+            "file": "/scratch/35_geodispbench3d/src/geodispbench3d/__init__.py",
+            "severity": "warning",
+            "message": "\"dataset\" is specified in __all__ but is not present in module",
+            "range": {
+                "start": {
+                    "line": 13,
+                    "character": 4
+                },
+                "end": {
+                    "line": 13,
+                    "character": 13
+                }
+            },
+            "rule": "reportUnsupportedDunderAll"
+        },
+        {
+            "file": "/scratch/35_geodispbench3d/src/geodispbench3d/__init__.py",
+            "severity": "warning",
+            "message": "\"metrics\" is specified in __all__ but is not present in module",
+            "range": {
+                "start": {
+                    "line": 14,
+                    "character": 4
+                },
+                "end": {
+                    "line": 14,
+                    "character": 13
+                }
+            },
+            "rule": "reportUnsupportedDunderAll"
+        },
+        {
+            "file": "/scratch/35_geodispbench3d/src/geodispbench3d/__init__.py",
+            "severity": "warning",
+            "message": "\"sweep\" is specified in __all__ but is not present in module",
+            "range": {
+                "start": {
+                    "line": 15,
+                    "character": 4
+                },
+                "end": {
+                    "line": 15,
+                    "character": 11
+                }
+            },
+            "rule": "reportUnsupportedDunderAll"
+        },
+        {
+            "file": "/scratch/35_geodispbench3d/src/geodispbench3d/__init__.py",
+            "severity": "warning",
+            "message": "\"suite\" is specified in __all__ but is not present in module",
+            "range": {
+                "start": {
+                    "line": 16,
+                    "character": 4
+                },
+                "end": {
+                    "line": 16,
+                    "character": 11
+                }
+            },
+            "rule": "reportUnsupportedDunderAll"
+        },
+        {
+            "file": "/scratch/35_geodispbench3d/src/geodispbench3d/__init__.py",
+            "severity": "warning",
+            "message": "\"results\" is specified in __all__ but is not present in module",
+            "range": {
+                "start": {
+                    "line": 17,
+                    "character": 4
+                },
+                "end": {
+                    "line": 17,
+                    "character": 13
+                }
+            },
+            "rule": "reportUnsupportedDunderAll"
+        },
+        {
+            "file": "/scratch/35_geodispbench3d/src/geodispbench3d/cli.py",
+            "severity": "warning",
+            "message": "Import \"streamlit.web\" could not be resolved",
+            "range": {
+                "start": {
+                    "line": 267,
+                    "character": 13
+                },
+                "end": {
+                    "line": 267,
+                    "character": 26
+                }
+            },
+            "rule": "reportMissingImports"
+        },
+        {
+            "file": "/scratch/35_geodispbench3d/src/geodispbench3d/dashboard/app.py",
+            "severity": "warning",
+            "message": "Import \"streamlit\" could not be resolved",
+            "range": {
+                "start": {
+                    "line": 20,
+                    "character": 11
+                },
+                "end": {
+                    "line": 20,
+                    "character": 20
+                }
+            },
+            "rule": "reportMissingImports"
+        },
+        {
+            "file": "/scratch/35_geodispbench3d/src/geodispbench3d/dashboard/app.py",
+            "severity": "warning",
+            "message": "Import \"altair\" could not be resolved",
+            "range": {
+                "start": {
+                    "line": 28,
+                    "character": 11
+                },
+                "end": {
+                    "line": 28,
+                    "character": 17
+                }
+            },
+            "rule": "reportMissingImports"
+        },
+        {
+            "file": "/scratch/35_geodispbench3d/src/geodispbench3d/dashboard/app.py",
+            "severity": "error",
+            "message": "Cannot access attribute \"isin\" for class \"ndarray[Any, Unknown]\"\n  Attribute \"isin\" is unknown",
+            "range": {
+                "start": {
+                    "line": 71,
+                    "character": 49
+                },
+                "end": {
+                    "line": 71,
+                    "character": 53
+                }
+            },
+            "rule": "reportAttributeAccessIssue"
+        },
+        {
+            "file": "/scratch/35_geodispbench3d/src/geodispbench3d/dashboard/app.py",
+            "severity": "error",
+            "message": "Cannot access attribute \"isin\" for class \"NDArray[Unknown]\"\n  Attribute \"isin\" is unknown",
+            "range": {
+                "start": {
+                    "line": 71,
+                    "character": 49
+                },
+                "end": {
+                    "line": 71,
+                    "character": 53
+                }
+            },
+            "rule": "reportAttributeAccessIssue"
+        },
+        {
+            "file": "/scratch/35_geodispbench3d/src/geodispbench3d/dashboard/app.py",
+            "severity": "error",
+            "message": "Cannot access attribute \"isin\" for class \"NDArray[Any]\"\n  Attribute \"isin\" is unknown",
+            "range": {
+                "start": {
+                    "line": 71,
+                    "character": 49
+                },
+                "end": {
+                    "line": 71,
+                    "character": 53
+                }
+            },
+            "rule": "reportAttributeAccessIssue"
+        },
+        {
+            "file": "/scratch/35_geodispbench3d/src/geodispbench3d/dashboard/app.py",
+            "severity": "error",
+            "message": "Argument of type \"Iterable[str]\" cannot be assigned to parameter \"values\" of type \"Series | DataFrame | Sequence[Unknown] | Mapping[Unknown, Unknown]\" in function \"isin\"\n  Type \"Iterable[str]\" is not assignable to type \"Series | DataFrame | Sequence[Unknown] | Mapping[Unknown, Unknown]\"\n    \"Iterable[str]\" is not assignable to \"Series\"\n    \"Iterable[str]\" is not assignable to \"DataFrame\"\n    \"Iterable[str]\" is not assignable to \"Sequence[Unknown]\"\n    \"Iterable[str]\" is not assignable to \"Mapping[Unknown, Unknown]\"",
+            "range": {
+                "start": {
+                    "line": 71,
+                    "character": 54
+                },
+                "end": {
+                    "line": 71,
+                    "character": 62
+                }
+            },
+            "rule": "reportArgumentType"
+        },
+        {
+            "file": "/scratch/35_geodispbench3d/src/geodispbench3d/dashboard/app.py",
+            "severity": "error",
+            "message": "Type \"DataFrame | Series | Unknown | Any | ndarray[Any, Unknown] | NDArray[Unknown]\" is not assignable to return type \"DataFrame\"\n  Type \"DataFrame | Series | Unknown | Any | ndarray[Any, Unknown] | NDArray[Unknown]\" is not assignable to type \"DataFrame\"\n    \"Series\" is not assignable to \"DataFrame\"",
+            "range": {
+                "start": {
+                    "line": 72,
+                    "character": 11
+                },
+                "end": {
+                    "line": 72,
+                    "character": 19
+                }
+            },
+            "rule": "reportReturnType"
+        },
+        {
+            "file": "/scratch/35_geodispbench3d/src/geodispbench3d/sweep/runner.py",
+            "severity": "error",
+            "message": "Cannot access attribute \"trial_index\" for class \"int\"\n  Attribute \"trial_index\" is unknown",
+            "range": {
+                "start": {
+                    "line": 394,
+                    "character": 39
+                },
+                "end": {
+                    "line": 394,
+                    "character": 50
+                }
+            },
+            "rule": "reportAttributeAccessIssue"
+        },
+        {
+            "file": "/scratch/35_geodispbench3d/src/geodispbench3d/sweep/runner.py",
+            "severity": "error",
+            "message": "Cannot access attribute \"trial_index\" for class \"Mapping[Unknown, Unknown]\"\n  Attribute \"trial_index\" is unknown",
+            "range": {
+                "start": {
+                    "line": 394,
+                    "character": 39
+                },
+                "end": {
+                    "line": 394,
+                    "character": 50
+                }
+            },
+            "rule": "reportAttributeAccessIssue"
+        },
+        {
+            "file": "/scratch/35_geodispbench3d/src/geodispbench3d/sweep/runner.py",
+            "severity": "error",
+            "message": "Cannot access attribute \"parameters\" for class \"int\"\n  Attribute \"parameters\" is unknown",
+            "range": {
+                "start": {
+                    "line": 400,
+                    "character": 35
+                },
+                "end": {
+                    "line": 400,
+                    "character": 45
+                }
+            },
+            "rule": "reportAttributeAccessIssue"
+        },
+        {
+            "file": "/scratch/35_geodispbench3d/src/geodispbench3d/sweep/runner.py",
+            "severity": "error",
+            "message": "Cannot access attribute \"parameters\" for class \"Mapping[Unknown, Unknown]\"\n  Attribute \"parameters\" is unknown",
+            "range": {
+                "start": {
+                    "line": 400,
+                    "character": 35
+                },
+                "end": {
+                    "line": 400,
+                    "character": 45
+                }
+            },
+            "rule": "reportAttributeAccessIssue"
+        },
+        {
+            "file": "/scratch/35_geodispbench3d/src/geodispbench3d/tool/loader.py",
+            "severity": "error",
+            "message": "Argument of type \"Dict[DictKeyType, Any] | dict[Unknown, Unknown]\" cannot be assigned to parameter \"raw\" of type \"Mapping[str, Any]\" in function \"_build_adapter\"\n  Type \"Dict[DictKeyType, Any] | dict[Unknown, Unknown]\" is not assignable to type \"Mapping[str, Any]\"\n    \"Dict[DictKeyType, Any]\" is not assignable to \"Mapping[str, Any]\"\n      Type parameter \"_KT@Mapping\" is invariant, but \"DictKeyType\" is not the same as \"str\"",
+            "range": {
+                "start": {
+                    "line": 64,
+                    "character": 35
+                },
+                "end": {
+                    "line": 64,
+                    "character": 38
+                }
+            },
+            "rule": "reportArgumentType"
+        },
+        {
+            "file": "/scratch/35_geodispbench3d/src/geodispbench3d/tool/loader.py",
+            "severity": "error",
+            "message": "Argument of type \"Dict[DictKeyType, Any] | dict[Unknown, Unknown]\" cannot be assigned to parameter \"raw\" of type \"Mapping[str, Any]\" in function \"__init__\"\n  Type \"Dict[DictKeyType, Any] | dict[Unknown, Unknown]\" is not assignable to type \"Mapping[str, Any]\"\n    \"Dict[DictKeyType, Any]\" is not assignable to \"Mapping[str, Any]\"\n      Type parameter \"_KT@Mapping\" is invariant, but \"DictKeyType\" is not the same as \"str\"",
+            "range": {
+                "start": {
+                    "line": 82,
+                    "character": 12
+                },
+                "end": {
+                    "line": 82,
+                    "character": 15
+                }
+            },
+            "rule": "reportArgumentType"
+        },
+        {
+            "file": "/scratch/35_geodispbench3d/src/geodispbench3d/tool/loader.py",
+            "severity": "error",
+            "message": "Argument of type \"Any | None\" cannot be assigned to parameter \"iterable\" of type \"Iterable[_T@list]\" in function \"__init__\"\n  Type \"Any | None\" is not assignable to type \"Iterable[_T@list]\"\n    \"None\" is incompatible with protocol \"Iterable[_T@list]\"\n      \"__iter__\" is not present",
+            "range": {
+                "start": {
+                    "line": 199,
+                    "character": 28
+                },
+                "end": {
+                    "line": 199,
+                    "character": 47
+                }
+            },
+            "rule": "reportArgumentType"
+        },
+        {
+            "file": "/scratch/35_geodispbench3d/src/geodispbench3d_iof3d/adapter.py",
+            "severity": "error",
+            "message": "Argument of type \"_BaseConfigLookup\" cannot be assigned to parameter \"base_values\" of type \"Mapping[str, Any] | None\" in function \"is_active\"\n  Type \"_BaseConfigLookup\" is not assignable to type \"Mapping[str, Any] | None\"\n    \"_BaseConfigLookup\" is not assignable to \"Mapping[str, Any]\"\n    \"_BaseConfigLookup\" is not assignable to \"None\"",
+            "range": {
+                "start": {
+                    "line": 145,
+                    "character": 44
+                },
+                "end": {
+                    "line": 145,
+                    "character": 67
+                }
+            },
+            "rule": "reportArgumentType"
+        },
+        {
+            "file": "/scratch/35_geodispbench3d/src/geodispbench3d_iof3d/adapter.py",
+            "severity": "error",
+            "message": "Argument of type \"str | Any\" cannot be assigned to parameter \"opencv_detector\" of type \"Literal['sift', 'kaze']\" in function \"__init__\"\n  Type \"str | Any\" is not assignable to type \"Literal['sift', 'kaze']\"\n    Type \"str\" is not assignable to type \"Literal['sift', 'kaze']\"\n      \"str\" is not assignable to type \"Literal['sift']\"\n      \"str\" is not assignable to type \"Literal['kaze']\"",
+            "range": {
+                "start": {
+                    "line": 321,
+                    "character": 24
+                },
+                "end": {
+                    "line": 321,
+                    "character": 39
+                }
+            },
+            "rule": "reportArgumentType"
+        },
+        {
+            "file": "/scratch/35_geodispbench3d/src/geodispbench3d_iof3d/adapter.py",
+            "severity": "error",
+            "message": "Argument of type \"str | Any\" cannot be assigned to parameter \"opencv_matcher\" of type \"Literal['bf']\" in function \"__init__\"\n  Type \"str | Any\" is not assignable to type \"Literal['bf']\"\n    \"str\" is not assignable to type \"Literal['bf']\"",
+            "range": {
+                "start": {
+                    "line": 322,
+                    "character": 23
+                },
+                "end": {
+                    "line": 322,
+                    "character": 37
+                }
+            },
+            "rule": "reportArgumentType"
+        },
+        {
+            "file": "/scratch/35_geodispbench3d/src/geodispbench3d_iof3d/adapter.py",
+            "severity": "error",
+            "message": "Argument of type \"_BaseConfigLookup\" cannot be assigned to parameter \"base_values\" of type \"Mapping[str, Any] | None\" in function \"is_active\"\n  Type \"_BaseConfigLookup\" is not assignable to type \"Mapping[str, Any] | None\"\n    \"_BaseConfigLookup\" is not assignable to \"Mapping[str, Any]\"\n    \"_BaseConfigLookup\" is not assignable to \"None\"",
+            "range": {
+                "start": {
+                    "line": 428,
+                    "character": 44
+                },
+                "end": {
+                    "line": 428,
+                    "character": 54
+                }
+            },
+            "rule": "reportArgumentType"
+        },
+        {
+            "file": "/scratch/35_geodispbench3d/src/geodispbench3d_iof3d/cli.py",
+            "severity": "error",
+            "message": "\"Never\" is not iterable",
+            "range": {
+                "start": {
+                    "line": 45,
+                    "character": 47
+                },
+                "end": {
+                    "line": 45,
+                    "character": 60
+                }
+            },
+            "rule": "reportGeneralTypeIssues"
+        },
+        {
+            "file": "/scratch/35_geodispbench3d/src/geodispbench3d_iof3d/factory.py",
+            "severity": "error",
+            "message": "Argument of type \"ListConfig | DictConfig\" cannot be assigned to parameter \"cfg\" of type \"DictConfig | None\" in function \"_build_app_config\"\n  Type \"ListConfig | DictConfig\" is not assignable to type \"DictConfig | None\"\n    Type \"ListConfig\" is not assignable to type \"DictConfig | None\"\n      \"ListConfig\" is not assignable to \"DictConfig\"\n      \"ListConfig\" is not assignable to \"None\"",
+            "range": {
+                "start": {
+                    "line": 73,
+                    "character": 32
+                },
+                "end": {
+                    "line": 73,
+                    "character": 40
+                }
+            },
+            "rule": "reportArgumentType"
+        },
+        {
+            "file": "/scratch/35_geodispbench3d/src/geodispbench3d_iof3d/factory.py",
+            "severity": "error",
+            "message": "Argument of type \"Any | None\" cannot be assigned to parameter \"iterable\" of type \"Iterable[_T@list]\" in function \"__init__\"\n  Type \"Any | None\" is not assignable to type \"Iterable[_T@list]\"\n    \"None\" is incompatible with protocol \"Iterable[_T@list]\"\n      \"__iter__\" is not present",
+            "range": {
+                "start": {
+                    "line": 141,
+                    "character": 20
+                },
+                "end": {
+                    "line": 141,
+                    "character": 39
+                }
+            },
+            "rule": "reportArgumentType"
+        },
+        {
+            "file": "/scratch/35_geodispbench3d/tests/core/test_loaders.py",
+            "severity": "error",
+            "message": "Argument of type \"GroundTruthSpec | None\" cannot be assigned to parameter \"spec\" of type \"GroundTruthSpec\" in function \"load_ground_truth\"\n  Type \"GroundTruthSpec | None\" is not assignable to type \"GroundTruthSpec\"\n    \"None\" is not assignable to \"GroundTruthSpec\"",
+            "range": {
+                "start": {
+                    "line": 96,
+                    "character": 27
+                },
+                "end": {
+                    "line": 96,
+                    "character": 51
+                }
+            },
+            "rule": "reportArgumentType"
+        },
+        {
+            "file": "/scratch/35_geodispbench3d/tests/core/test_rescore.py",
+            "severity": "error",
+            "message": "Argument of type \"Path | None\" cannot be assigned to parameter \"predictions_root\" of type \"Path\" in function \"write_prediction\"\n  Type \"Path | None\" is not assignable to type \"Path\"\n    \"None\" is not assignable to \"Path\"",
+            "range": {
+                "start": {
+                    "line": 140,
+                    "character": 8
+                },
+                "end": {
+                    "line": 140,
+                    "character": 38
+                }
+            },
+            "rule": "reportArgumentType"
+        }
+    ],
+    "summary": {
+        "filesAnalyzed": 54,
+        "errorCount": 21,
+        "warningCount": 9,
+        "informationCount": 0,
+        "timeInSec": 10.546
+    }
+}
+
