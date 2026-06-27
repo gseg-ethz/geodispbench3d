@@ -254,7 +254,12 @@ def _rescore_one(
             record_extras=record_extras,
             logger=log,
         )
-    except Exception:  # pragma: no cover - defensive
+    except Exception:
+        # Plugin/user callable boundary: evaluate_trial runs arbitrary
+        # parser/metric code, so a closed exception set is inapplicable. Stay
+        # broad (belt-and-suspenders — inner parser/metric failures are already
+        # caught) so a plugin bug skips this run instead of aborting the pass
+        # (fail-soft, F-08).
         log.exception("rescore: evaluate_trial failed for %s", run_dir)
         outcome.parser_failed = True
         return outcome
@@ -292,8 +297,8 @@ def _rescore_one(
                     "cached_by": "rescore",
                 },
             )
-        except Exception:  # pragma: no cover - cache write failures shouldn't fail rescoring
-            log.debug("rescore: cache write failed for %s", run_dir, exc_info=True)
+        except (OSError, TypeError):  # cache write failures shouldn't fail rescoring
+            log.warning("rescore: cache write failed for %s", run_dir, exc_info=True)
 
     # Audit log appended to the trial summary.
     try:
@@ -307,8 +312,14 @@ def _rescore_one(
                 "metrics": dict(evaluation.scalar_metrics),
             },
         )
-    except Exception:  # pragma: no cover - non-fatal
-        log.debug("rescore: append_rescore_entry failed for %s", run_dir, exc_info=True)
+    except (OSError, AttributeError, TypeError):
+        # append_rescore_entry: trial_record mkdir + load_trial_record (which
+        # swallows JSONDecodeError, returning {}) + payload['rescore_log'].append
+        # + write_trial_record (json.dump + Path.replace). A malformed-but-valid
+        # summary whose rescore_log is a non-list truthy yields AttributeError on
+        # .append; OSError/TypeError cover the I/O + serialization paths. Stays
+        # fail-soft (the rescore itself already succeeded).
+        log.warning("rescore: append_rescore_entry failed for %s", run_dir, exc_info=True)
 
     outcome.scored = True
     outcome.rows = list(evaluation.record_rows)

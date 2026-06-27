@@ -20,7 +20,7 @@ from __future__ import annotations
 
 import hashlib
 import json
-from collections.abc import Mapping, Sequence
+from collections.abc import Callable, Mapping, Sequence
 from dataclasses import asdict, dataclass, field
 from datetime import UTC, datetime
 from pathlib import Path
@@ -80,13 +80,29 @@ def trial_record_path(run_dir: Path) -> Path:
     return out_dir / "summary.json"
 
 
-def load_trial_record(path: Path) -> dict[str, Any]:
+def load_trial_record(
+    path: Path,
+    *,
+    on_non_fatal: Callable[[Exception], None] | None = None,
+) -> dict[str, Any]:
+    """Load a trial summary, degrading to ``{}`` when absent or unreadable.
+
+    An absent file is normal (returns ``{}`` without calling ``on_non_fatal``).
+    A present-but-corrupt summary (bad permissions, malformed JSON) is a
+    fail-soft failure: it still degrades to ``{}``, but when ``on_non_fatal`` is
+    supplied it is invoked with the caught exception so the caller can count it
+    (F-08). Internal callers that read-modify-write (``update_trial_record``,
+    ``append_rescore_entry``, ``read_provenance``) leave it at its default.
+    """
+
     if not path.exists():
         return {}
     try:
         with path.open("r", encoding="utf-8") as fh:
             return json.load(fh)
-    except Exception:
+    except (OSError, json.JSONDecodeError) as exc:
+        if on_non_fatal is not None:
+            on_non_fatal(exc)
         return {}
 
 

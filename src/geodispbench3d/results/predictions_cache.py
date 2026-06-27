@@ -32,7 +32,7 @@ so Path / numpy values survive.
 from __future__ import annotations
 
 import json
-from collections.abc import Mapping
+from collections.abc import Callable, Mapping
 from dataclasses import asdict, is_dataclass
 from datetime import datetime
 from pathlib import Path
@@ -108,8 +108,20 @@ def write_prediction(
     return out
 
 
-def read_prediction(path: Path) -> dict[str, Any] | None:
-    """Read a cache file. Returns ``None`` when the file is absent."""
+def read_prediction(
+    path: Path,
+    *,
+    on_non_fatal: Callable[[Exception], None] | None = None,
+) -> dict[str, Any] | None:
+    """Read a cache file. Returns ``None`` when the file is absent or unreadable.
+
+    An absent file is normal (a cache miss) and never counts as a failure. A
+    present-but-unreadable file (bad permissions, corrupt JSON) is a fail-soft
+    failure: it still degrades to a ``None`` miss, but when ``on_non_fatal`` is
+    supplied it is invoked with the caught exception so the caller's pass-level
+    diagnostics can count it (F-08). Internal callers that treat a miss as
+    normal leave ``on_non_fatal`` at its default ``None``.
+    """
 
     p = Path(path)
     if not p.is_file():
@@ -117,7 +129,9 @@ def read_prediction(path: Path) -> dict[str, Any] | None:
     try:
         with p.open("r", encoding="utf-8") as fh:
             return json.load(fh)
-    except Exception:
+    except (OSError, json.JSONDecodeError) as exc:
+        if on_non_fatal is not None:
+            on_non_fatal(exc)
         return None
 
 

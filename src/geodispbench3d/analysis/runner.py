@@ -111,7 +111,11 @@ def analyze(
                 record_extras=record_extras,
                 logger=log,
             )
-        except Exception:  # pragma: no cover - defensive
+        except Exception:
+            # Plugin/user callable boundary: evaluate_trial runs arbitrary
+            # metric code, so a closed exception set is inapplicable. Stay broad
+            # so one prediction's failure skips it instead of aborting the whole
+            # analyze pass (fail-soft, F-08).
             log.exception("analyze: evaluate_trial raised for %s", path)
             continue
 

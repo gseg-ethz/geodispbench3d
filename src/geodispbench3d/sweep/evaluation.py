@@ -87,6 +87,9 @@ def evaluate_trial(
                 logger=log,
             )
         except Exception:
+            # Plugin/user callable: a closed exception set is inapplicable (the
+            # parser may raise anything). Stay broad so a parser bug degrades to
+            # a None prediction instead of crashing the trial (fail-soft, F-08).
             log.exception("Output parser failed for trial in %s", trial_result.outputs.run_dir)
             prediction = None
     else:
@@ -175,6 +178,9 @@ def _invoke_metric(
     try:
         return fn(**kwargs)
     except Exception:
+        # Plugin/user callable: a closed exception set is inapplicable (the
+        # metric may raise anything). Stay broad so one metric bug skips that
+        # metric instead of crashing the trial (fail-soft, F-08).
         logger.exception("Metric %r raised; skipping", definition.id)
         return None
 

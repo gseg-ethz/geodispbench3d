@@ -82,8 +82,8 @@ class AxSweepRunner:
         if self._trial_log_path is not None:
             try:
                 self._trial_log_path.parent.mkdir(parents=True, exist_ok=True)
-            except Exception:
-                self._logger.debug(
+            except OSError:
+                self._logger.warning(
                     "Unable to create trial log directory %s",
                     self._trial_log_path.parent,
                     exc_info=True,
@@ -325,8 +325,8 @@ class AxSweepRunner:
                         },
                     },
                 )
-            except Exception:  # pragma: no cover - never fail a trial on provenance
-                self._logger.debug(
+            except (OSError, TypeError):  # never fail a trial on provenance
+                self._logger.warning(
                     "Unable to stamp provenance for run %s",
                     result.outputs.run_dir,
                     exc_info=True,
@@ -354,8 +354,8 @@ class AxSweepRunner:
                             "run_dir": str(result.outputs.run_dir),
                         },
                     )
-                except Exception:  # pragma: no cover - cache failure shouldn't fail a trial
-                    self._logger.debug(
+                except (OSError, TypeError):  # cache failure shouldn't fail a trial
+                    self._logger.warning(
                         "Unable to cache prediction for run %s",
                         result.outputs.run_dir,
                         exc_info=True,
@@ -469,8 +469,8 @@ class AxSweepRunner:
         try:
             with self._trial_log_path.open("a", encoding="utf-8") as fh:
                 fh.write(f"{run_hash}\n")
-        except Exception:
-            self._logger.debug(
+        except OSError:
+            self._logger.warning(
                 "Unable to append run hash %s to %s",
                 run_hash,
                 self._trial_log_path,
