@@ -19,7 +19,7 @@ publishing close the loop.
 Decimal phases appear between their surrounding integers in numeric order.
 
 - [x] **Phase 1: Code-Health Audit** - Read-only audit producing a written findings report that gates all subsequent work (completed 2026-06-26)
-- [ ] **Phase 2: Targeted Fixes** - Apply audit-scoped fixes until the full test and quality-tool suite passes
+- [x] **Phase 2: Targeted Fixes** - Apply audit-scoped fixes until the full test and quality-tool suite passes (completed 2026-06-27)
 - [ ] **Phase 3: CLI Hardening** - Harden all three CLI surfaces; document F2S3 as the canonical CliToolAdapter example
 - [ ] **Phase 4: Licensing, Metadata & Packaging** - Reconcile license, drop Private classifier, untangle packaging deps; resolve open iof3d/pchandler decisions
 - [ ] **Phase 5: CI/CD & Release** - Automate lint/type/test gates, wheel+sdist build, and trusted-publishing release to public PyPI
@@ -59,7 +59,7 @@ Decimal phases appear between their surrounding integers in numeric order.
   3. `SweepParameter` construction is handled by a single source (e.g. `from_mapping` classmethod); `_parser_fn_repr` lives in one shared location, not two
   4. `ruff`, `pyright`, and the full `pytest` suite (core, iof3d, f2s3) pass without errors after every fix lands
 
-**Plans**: 6/7 plans executed
+**Plans**: 7/7 plans complete
 
 **Wave 0** *(test net + pyright baseline — D-04 tests-first)*
 
@@ -81,7 +81,7 @@ Decimal phases appear between their surrounding integers in numeric order.
 
 **Wave 4** *(blocked on 02-04 + 02-06)*
 
-- [ ] 02-07-PLAN.md — F-03 parser_fn_repr dedup + F-30 dead-field deletion/guards + final FIX-04 gate
+- [x] 02-07-PLAN.md — F-03 parser_fn_repr dedup + F-30 dead-field deletion/guards + final FIX-04 gate
 
 ### Phase 3: CLI Hardening
 
@@ -141,7 +141,7 @@ Decimal phases appear between their surrounding integers in numeric order.
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
 | 1. Code-Health Audit | 2/2 | Complete    | 2026-06-26 |
-| 2. Targeted Fixes | 6/7 | In Progress|  |
+| 2. Targeted Fixes | 7/7 | Complete   | 2026-06-27 |
 | 3. CLI Hardening | 0/? | Not started | - |
 | 4. Licensing, Metadata & Packaging | 0/? | Not started | - |
 | 5. CI/CD & Release | 0/? | Not started | - |

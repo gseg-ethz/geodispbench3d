@@ -4,17 +4,17 @@ milestone: v1.0
 milestone_name: milestone
 current_phase: 02
 current_phase_name: targeted-fixes
-status: executing
+status: verifying
 stopped_at: Completed 02-03-PLAN.md
-last_updated: "2026-06-27T09:23:09.001Z"
+last_updated: "2026-06-27T09:36:23.683Z"
 last_activity: 2026-06-27
 last_activity_desc: Phase 02 execution started
 progress:
   total_phases: 5
-  completed_phases: 1
+  completed_phases: 2
   total_plans: 9
-  completed_plans: 8
-  percent: 20
+  completed_plans: 9
+  percent: 40
 ---
 
 # Project State
@@ -30,7 +30,7 @@ See: .planning/PROJECT.md (updated 2026-06-26)
 
 Phase: 02 (targeted-fixes) — EXECUTING
 Plan: 7 of 7
-Status: Ready to execute
+Status: Phase complete — ready for verification
 Last activity: 2026-06-27 — Phase 02 execution started
 
 Progress: [░░░░░░░░░░] 0%
@@ -63,6 +63,7 @@ Progress: [░░░░░░░░░░] 0%
 | Phase 02 P04 | 12min | 1 tasks | 4 files |
 | Phase 02 P05 | 15min | 3 tasks | 11 files |
 | Phase 02 P06 | 15min | 3 tasks | 8 files |
+| Phase 02 P07 | 18min | 3 tasks | 12 files |
 
 ## Accumulated Context
 
@@ -86,6 +87,9 @@ Recent decisions affecting current work:
 - [Phase ?]: [Phase 02-05]: F-08 resolved — typed PassDiagnostics threaded through sweep/rescore/analyze; 8 IO excepts narrowed (rescore append corrected to (OSError, AttributeError, TypeError)), 4 plugin-callable boundaries documented-broad; read_prediction/load_trial_record gain on_non_fatal; each CLI summary prints an aggregate 'N non-fatal failures' line; fail-soft flow preserved
 - [Phase ?]: F-09 (02-06): stamp UTC via datetime.now(UTC).isoformat() with no hand-appended Z; helper names _utcnow/_utcnow_compact kept, only the call swapped
 - [Phase ?]: F-10 (02-06): hoisted only internal/stdlib imports in runner.py; Ax stays lazy/guarded; test_imports.py is the authoritative lazy-gating guard. F-08 cache-write test repatched to the hoisted geodispbench3d.sweep.runner.write_prediction binding
+- [Phase ?]: 02-07: F-03 parser_fn_repr single-sourced in sweep/trial_record.py (public, __all__); runner+rescore import it; byte-identity locked across module/method/nested(<locals>) callables so the sweep/rescore cache key cannot drift
+- [Phase ?]: 02-07: F-30 four dead fields deleted (outputs_options, scan_by_epoch, gt_kinds_supported, yaml_hash incl. _tool_from_record deserializer); old yaml_hash records still load; hash_file retained as public util
+- [Phase ?]: 02-07: ExecutionConfig.ensure_supported() raises deterministically (D-09) on non-default parallel_trials/override_tool_mode, called from BOTH _cmd_sweep and run_with_suite (bypass-proof); fields retained; FIX-04 green-gate closed
 
 ### Open Questions (surface at phase discussions)
 
@@ -117,6 +121,6 @@ yet.
 
 ## Session Continuity
 
-Last session: 2026-06-27T09:22:16.001Z
+Last session: 2026-06-27T09:35:52.802Z
 Stopped at: Completed 02-03-PLAN.md
 Resume file: None
