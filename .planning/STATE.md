@@ -6,14 +6,14 @@ current_phase: 02
 current_phase_name: targeted-fixes
 status: executing
 stopped_at: Completed 02-03-PLAN.md
-last_updated: "2026-06-27T09:14:10.521Z"
+last_updated: "2026-06-27T09:23:09.001Z"
 last_activity: 2026-06-27
 last_activity_desc: Phase 02 execution started
 progress:
   total_phases: 5
   completed_phases: 1
   total_plans: 9
-  completed_plans: 7
+  completed_plans: 8
   percent: 20
 ---
 
@@ -29,7 +29,7 @@ See: .planning/PROJECT.md (updated 2026-06-26)
 ## Current Position
 
 Phase: 02 (targeted-fixes) — EXECUTING
-Plan: 6 of 7
+Plan: 7 of 7
 Status: Ready to execute
 Last activity: 2026-06-27 — Phase 02 execution started
 
@@ -62,6 +62,7 @@ Progress: [░░░░░░░░░░] 0%
 | Phase 02 P03 | 12min | 3 tasks | 4 files |
 | Phase 02 P04 | 12min | 1 tasks | 4 files |
 | Phase 02 P05 | 15min | 3 tasks | 11 files |
+| Phase 02 P06 | 15min | 3 tasks | 8 files |
 
 ## Accumulated Context
 
@@ -83,6 +84,8 @@ Recent decisions affecting current work:
 - [Phase 02-03]: SuiteConfig retype + provenance collapse (F-01/F-13); objective-specific finite-case signal (F-05) via SweepRunSummary + dedicated trial-level artifact, kept off the Ax objective payload — Typed consumers remove 15 attr-defined ignores with no new pyright errors; finite/total is objective-specific (self._objective_name) and surfaced via log + artifact + return, never injected into complete_trial raw_data
 - [Phase 02]: 02-04: SweepParameter coercion single-sourced via from_mapping classmethod (F-02/FIX-03); three sites routed through it, _coerce_hparam removed; net -2 pyright errors (values-list patterns cleared at tool/loader.py + factory.py); from_mapping is a class member, not in __all__
 - [Phase ?]: [Phase 02-05]: F-08 resolved — typed PassDiagnostics threaded through sweep/rescore/analyze; 8 IO excepts narrowed (rescore append corrected to (OSError, AttributeError, TypeError)), 4 plugin-callable boundaries documented-broad; read_prediction/load_trial_record gain on_non_fatal; each CLI summary prints an aggregate 'N non-fatal failures' line; fail-soft flow preserved
+- [Phase ?]: F-09 (02-06): stamp UTC via datetime.now(UTC).isoformat() with no hand-appended Z; helper names _utcnow/_utcnow_compact kept, only the call swapped
+- [Phase ?]: F-10 (02-06): hoisted only internal/stdlib imports in runner.py; Ax stays lazy/guarded; test_imports.py is the authoritative lazy-gating guard. F-08 cache-write test repatched to the hoisted geodispbench3d.sweep.runner.write_prediction binding
 
 ### Open Questions (surface at phase discussions)
 
@@ -114,6 +117,6 @@ yet.
 
 ## Session Continuity
 
-Last session: 2026-06-27T09:13:57.089Z
+Last session: 2026-06-27T09:22:16.001Z
 Stopped at: Completed 02-03-PLAN.md
 Resume file: None
