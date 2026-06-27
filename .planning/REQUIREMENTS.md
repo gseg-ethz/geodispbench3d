@@ -38,9 +38,9 @@ Requirements for this milestone. Each maps to roadmap phases.
 
 ### Packaging & Dependencies
 
-- [ ] **PKG-01**: The `iof3d` optional dependency is commented out / disabled for the public release (iof3D is not public at go-live)
-- [ ] **PKG-02**: The F2S3 path is installable standalone — `pchandler` resolves without the `iof3d` extra (today the `f2s3` extra is empty but the parser imports `pchandler`)
-- [ ] **PKG-03**: geodispbench3d's `pchandler` usage is verified against the newly-published `pchandler` on PyPI and confirmed non-breaking (or adapted)
+- [x] **PKG-01**: The `iof3d` optional dependency is commented out / disabled for the public release (iof3D is not public at go-live)
+- [x] **PKG-02**: The F2S3 path is installable standalone — `pchandler` resolves without the `iof3d` extra (today the `f2s3` extra is empty but the parser imports `pchandler`)
+- [x] **PKG-03**: geodispbench3d's `pchandler` usage is verified against the newly-published `pchandler` on PyPI and confirmed non-breaking (or adapted)
 
 ### CI/CD & Release
 
@@ -96,9 +96,9 @@ Which phases cover which requirements. Updated during roadmap creation.
 | LIC-02 | Phase 4 | Complete |
 | LIC-03 | Phase 4 | Complete |
 | LIC-04 | Phase 4 | Complete |
-| PKG-01 | Phase 4 | Pending |
-| PKG-02 | Phase 4 | Pending |
-| PKG-03 | Phase 4 | Pending |
+| PKG-01 | Phase 4 | Complete |
+| PKG-02 | Phase 4 | Complete |
+| PKG-03 | Phase 4 | Complete |
 | CICD-01 | Phase 5 | Pending |
 | CICD-02 | Phase 5 | Pending |
 | CICD-03 | Phase 5 | Pending |

@@ -21,7 +21,7 @@ Decimal phases appear between their surrounding integers in numeric order.
 - [x] **Phase 1: Code-Health Audit** - Read-only audit producing a written findings report that gates all subsequent work (completed 2026-06-26)
 - [x] **Phase 2: Targeted Fixes** - Apply audit-scoped fixes until the full test and quality-tool suite passes (completed 2026-06-27)
 - [x] **Phase 3: CLI Hardening** - Harden all three CLI surfaces; document F2S3 as the canonical CliToolAdapter example (completed 2026-06-27)
-- [ ] **Phase 4: Licensing, Metadata & Packaging** - Reconcile license, drop Private classifier, untangle packaging deps; resolve open iof3d/pchandler decisions
+- [x] **Phase 4: Licensing, Metadata & Packaging** - Reconcile license, drop Private classifier, untangle packaging deps; resolve open iof3d/pchandler decisions (completed 2026-06-27)
 - [ ] **Phase 5: CI/CD & Release** - Automate lint/type/test gates, wheel+sdist build, and trusted-publishing release to public PyPI
 
 ## Phase Details
@@ -132,7 +132,7 @@ Decimal phases appear between their surrounding integers in numeric order.
 
 **Both resolved in 04-CONTEXT.md:** (D-01) single wheel, ship `geodispbench3d_iof3d` dormant via a PEP 562 import guard + graceful `iof3d-ax` launcher; (D-05) add `pchandler ~= 2.1` to the `f2s3` extra (F2S3 stays fully runnable).
 
-**Plans**: 1/2 plans executed
+**Plans**: 2/2 plans complete
 
 **Wave 1**
 
@@ -140,7 +140,7 @@ Decimal phases appear between their surrounding integers in numeric order.
 
 **Wave 2** *(blocked on 04-01 — shared `pyproject.toml`)*
 
-- [ ] 04-02-PLAN.md — Packaging & dormant-iof3D guard: comment `iof3d` extra + `f2s3 = ["pchandler ~= 2.1"]`, PEP 562 `__getattr__` guard in `geodispbench3d_iof3d/__init__.py` + `cli.py` launcher split, conftest skip-message fix (PKG-01…03)
+- [x] 04-02-PLAN.md — Packaging & dormant-iof3D guard: comment `iof3d` extra + `f2s3 = ["pchandler ~= 2.1"]`, PEP 562 `__getattr__` guard in `geodispbench3d_iof3d/__init__.py` + `cli.py` launcher split, conftest skip-message fix (PKG-01…03)
 
 ### Phase 5: CI/CD & Release
 
@@ -169,5 +169,5 @@ Decimal phases appear between their surrounding integers in numeric order.
 | 1. Code-Health Audit | 2/2 | Complete    | 2026-06-26 |
 | 2. Targeted Fixes | 7/7 | Complete    | 2026-06-27 |
 | 3. CLI Hardening | 4/4 | Complete    | 2026-06-27 |
-| 4. Licensing, Metadata & Packaging | 1/2 | In Progress|  |
+| 4. Licensing, Metadata & Packaging | 2/2 | Complete   | 2026-06-27 |
 | 5. CI/CD & Release | 0/? | Not started | - |
