@@ -101,6 +101,8 @@ def test_parser_failure_yields_none_prediction_and_keeps_trial_scalars(
     assert out.prediction is None
     # The adapter-reported trial scalar is still reported despite the parser fail.
     assert out.scalar_metrics["wallclock_runtime"] == 2.5
+    # F-08: the swallowed parser failure is counted.
+    assert out.non_fatal_failures == 1
 
 
 # --- (b) one metric raises -> skipped, others survive -----------------------
@@ -124,6 +126,8 @@ def test_metric_raise_is_skipped_while_others_survive(tmp_path: Path) -> None:
 
     assert out.scalar_metrics["good"] == 0.5
     assert "bad" not in out.scalar_metrics
+    # F-08: the one metric that raised is counted; the good metric is not.
+    assert out.non_fatal_failures == 1
 
 
 # --- (c) objective metric returns non-scalar -> warning + skip --------------
@@ -146,6 +150,8 @@ def test_objective_metric_non_scalar_is_warned_and_skipped(tmp_path: Path, caplo
 
     assert "listy" not in out.scalar_metrics
     assert "non-scalar" in caplog.text
+    # F-08: the non-scalar objective skip is counted.
+    assert out.non_fatal_failures == 1
 
 
 # --- (d) needs-based kwarg assembly -----------------------------------------
@@ -304,3 +310,5 @@ def test_metric_returning_none_is_skipped_no_parser_no_override(tmp_path: Path) 
     assert out.prediction is None
     assert out.scalar_metrics == {}
     assert out.record_rows == []
+    # F-08: metrics that legitimately return None are NOT counted as failures.
+    assert out.non_fatal_failures == 0

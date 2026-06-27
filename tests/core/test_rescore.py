@@ -159,6 +159,39 @@ def test_rescore_with_prediction_cache_hit(tmp_path: Path) -> None:
     assert summary.cache_hits == 1
 
 
+def test_rescore_default_options_zero_non_fatal_failures(tmp_path: Path) -> None:
+    """A clean rescore pass reports zero non-fatal failures (F-08)."""
+
+    suite = load_suite(_bootstrap_bench(tmp_path))
+    summary = rescore_suite(suite=suite, options=RescoreOptions())
+    assert summary.succeeded == 1
+    assert summary.non_fatal_failures == 0
+
+
+def test_rescore_malformed_rescore_log_is_counted_fail_soft(tmp_path: Path) -> None:
+    """A non-list ``rescore_log`` makes append_rescore_entry raise AttributeError;
+    it is swallowed fail-soft, counted in RescoreSummary.non_fatal_failures, and
+    the run still scores (F-08, corrected exception set OSError/AttributeError/TypeError)."""
+
+    suite = load_suite(_bootstrap_bench(tmp_path))
+
+    # Corrupt the (valid-JSON) summary so rescore_log is a truthy dict, not a
+    # list: append_rescore_entry then does ``{}.append(...)`` -> AttributeError.
+    run_dir = tmp_path / "runs" / "abcdef123456"
+    record_path = trial_record_path(run_dir)
+    record = load_trial_record(record_path)
+    record["rescore_log"] = {"unexpectedly": "a-dict"}
+    write_trial_record(record_path, record)
+
+    summary = rescore_suite(suite=suite, options=RescoreOptions())
+
+    # Fail-soft: the run was still scored despite the append failure.
+    assert summary.total == 1
+    assert summary.succeeded == 1
+    # F-08: the swallowed AttributeError on the append was counted.
+    assert summary.non_fatal_failures == 1
+
+
 def test_rescore_skips_failed_runs(tmp_path: Path) -> None:
     suite_yaml = _bootstrap_bench(tmp_path)
     suite = load_suite(suite_yaml)

@@ -23,6 +23,7 @@ from pathlib import Path
 from typing import Any
 
 from geodispbench3d.dataset.schema import CaseSpec, DatasetSpec
+from geodispbench3d.diagnostics import PassDiagnostics
 from geodispbench3d.metrics.registry import MetricRegistry
 from geodispbench3d.results.predictions_cache import read_prediction
 from geodispbench3d.sweep.evaluation import evaluate_trial
@@ -33,13 +34,19 @@ from .loader import AnalysisConfig
 
 @dataclass
 class AnalysisSummary:
-    """One-line counters returned by :func:`analyze`."""
+    """One-line counters returned by :func:`analyze`.
+
+    ``non_fatal_failures`` totals the swallowed fail-soft failures across the
+    pass (corrupt prediction reads, per-prediction evaluation skips), surfaced
+    as the CLI's aggregate "N non-fatal failures" line (F-08).
+    """
 
     total: int = 0
     succeeded: int = 0
     skipped_unreadable: int = 0
     skipped_no_case: int = 0
     rows_emitted: int = 0
+    non_fatal_failures: int = 0
 
 
 def analyze(
@@ -57,12 +64,16 @@ def analyze(
     case_index: Mapping[str, CaseSpec] = {c.name: c for c in config.dataset.cases}
     registry = MetricRegistry()
 
+    # One PassDiagnostics for the pass: corrupt prediction reads and per-
+    # prediction evaluation skips record here, surfaced on AnalysisSummary (F-08).
+    diag = PassDiagnostics()
+
     paths = config.predictions.resolve_all()
     log.info("analyze: %d prediction file(s) to score (pass_id=%s)", len(paths), pass_id)
 
     for path in paths:
         summary.total += 1
-        payload = read_prediction(path)
+        payload = read_prediction(path, on_non_fatal=lambda _exc: diag.add("prediction_read"))
         if payload is None:
             log.warning("analyze: cannot read %s, skipping", path)
             summary.skipped_unreadable += 1
@@ -117,20 +128,26 @@ def analyze(
             # so one prediction's failure skips it instead of aborting the whole
             # analyze pass (fail-soft, F-08).
             log.exception("analyze: evaluate_trial raised for %s", path)
+            diag.add("evaluation")
             continue
+
+        diag.add("evaluation", evaluation.non_fatal_failures)
 
         if on_record_rows and evaluation.record_rows:
             on_record_rows(list(evaluation.record_rows))
             summary.rows_emitted += len(evaluation.record_rows)
         summary.succeeded += 1
 
+    summary.non_fatal_failures = diag.non_fatal_failures
     log.info(
-        "analyze done: succeeded=%d total=%d unreadable=%d no_case=%d rows=%d",
+        "analyze done: succeeded=%d total=%d unreadable=%d no_case=%d rows=%d "
+        "non_fatal_failures=%d",
         summary.succeeded,
         summary.total,
         summary.skipped_unreadable,
         summary.skipped_no_case,
         summary.rows_emitted,
+        summary.non_fatal_failures,
     )
     return summary
 

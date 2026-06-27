@@ -498,3 +498,56 @@ def test_f05_partial_failure_surfaced_off_ax_objective(
     ):
         assert forbidden not in raw_data
     assert raw_data["median_displacement_error"] == pytest.approx(0.4)
+
+
+# ---------------------------------------------------------------------------
+# F-08 (02-05): the sweep pass counts swallowed fail-soft failures into
+# SweepRunSummary.non_fatal_failures while preserving fail-soft control flow.
+# ---------------------------------------------------------------------------
+
+
+def test_f08_cache_write_failure_counted_and_run_completes(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """A failing prediction-cache write is swallowed but counted (F-08).
+
+    The cache write is monkeypatched to raise OSError (NOT a real unwritable
+    filesystem path — platform-dependent per the plan). The trial still
+    completes and the failure surfaces as SweepRunSummary.non_fatal_failures.
+    """
+
+    suite = _bootstrap_suite(tmp_path, ["only"])
+    adapter = StubAdapter(run_root=tmp_path / "out", predictions={"only": _PRED_ERR_04})
+    runner, fake = _make_runner(monkeypatch, adapter)
+
+    def boom_write(*_args: Any, **_kwargs: Any) -> Any:
+        raise OSError("disk full")
+
+    # The runner imports write_prediction from this module at call time, so
+    # patching the source module is what the fail-soft except (OSError, TypeError)
+    # will actually catch.
+    monkeypatch.setattr("geodispbench3d.results.predictions_cache.write_prediction", boom_write)
+
+    result = runner.run_with_suite(suite=suite, max_trials=1)
+
+    # Fail-soft: the trial still completed and Ax still got its scalar.
+    assert isinstance(result, SweepRunSummary)
+    assert len(fake.completed) == 1
+    assert fake.failures == []
+    assert result.objective_cases_finite == 1
+    assert result.objective_cases_total == 1
+    # F-08: exactly one swallowed cache-write failure was counted.
+    assert result.non_fatal_failures == 1
+
+
+def test_f08_clean_sweep_has_zero_non_fatal_failures(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """A healthy multi-trial sweep reports zero non-fatal failures (F-08)."""
+
+    suite = _bootstrap_suite(tmp_path, ["only"])
+    adapter = StubAdapter(run_root=tmp_path / "out", predictions={"only": _PRED_ERR_04})
+    runner, _fake = _make_runner(monkeypatch, adapter)
+
+    result = runner.run_with_suite(suite=suite, max_trials=2)
+    assert result.non_fatal_failures == 0

@@ -31,6 +31,7 @@ except ImportError:  # pragma: no cover - optional dep or older Ax
             "pip install 'geodispbench3d[sweep]'"
         ) from ax_exc
 
+from geodispbench3d.diagnostics import PassDiagnostics
 from geodispbench3d.tool.base import ToolAdapter, TrialRequest
 
 from .evaluation import evaluate_trial
@@ -49,12 +50,18 @@ class SweepRunSummary:
 
     Extended additively by 02-05 (which appends ``non_fatal_failures``); keep
     the field order so the existing defaults stay valid.
+
+    ``non_fatal_failures`` is the count of swallowed fail-soft failures across
+    the whole sweep (per-case evaluation skips, provenance-stamp / prediction-
+    cache / run-hash write failures), surfaced as the CLI's aggregate
+    "N non-fatal failures" line (F-08).
     """
 
     best_trial: Any
     objective_name: str
     objective_cases_finite: int = 0
     objective_cases_total: int = 0
+    non_fatal_failures: int = 0
 
 
 class AxSweepRunner:
@@ -223,6 +230,9 @@ class AxSweepRunner:
 
         total_objective_cases_finite = 0
         total_objective_cases = 0
+        # One PassDiagnostics for the whole sweep; every fail-soft site records
+        # into it and the total rides out on SweepRunSummary (F-08).
+        pass_diag = PassDiagnostics()
         self._adapter.prepare()
         try:
             for _ in range(max_trials):
@@ -236,6 +246,7 @@ class AxSweepRunner:
                         registry,
                         ax_trial_index,
                         on_record_rows,
+                        diagnostics=pass_diag,
                     )
                     total_objective_cases_finite += cases_finite
                     total_objective_cases += cases_total
@@ -251,6 +262,7 @@ class AxSweepRunner:
             objective_name=self._objective_name,
             objective_cases_finite=total_objective_cases_finite,
             objective_cases_total=total_objective_cases,
+            non_fatal_failures=pass_diag.non_fatal_failures,
         )
 
     def _evaluate_across_cases(
@@ -261,12 +273,19 @@ class AxSweepRunner:
         registry: Any,
         ax_trial_index: int,
         on_record_rows: Callable[[Sequence[Mapping[str, Any]]], None] | None,
+        *,
+        diagnostics: PassDiagnostics | None = None,
     ) -> tuple[Mapping[str, float], int, int]:
         from geodispbench3d.sweep.trial_record import (
             DatasetProvenance,
             ParserProvenance,
             ToolProvenance,
         )
+
+        # ``diagnostics`` is the sweep-wide non-fatal counter (F-08). Direct
+        # callers (tests) may omit it; a throwaway then keeps the recording
+        # sites uniform without changing behavior.
+        diag = diagnostics if diagnostics is not None else PassDiagnostics()
 
         # source_path is always populated by load_tool_config (tool/loader.py),
         # so the typed field fully replaces the old getattr/.raw fallback chain.
@@ -281,7 +300,8 @@ class AxSweepRunner:
         for case in cases:
             request = TrialRequest(parameters=parameters, case_name=case.name)
             result = self._adapter.run_trial(request)
-            self._record_run_hash(result.outputs.run_dir.name)
+            if not self._record_run_hash(result.outputs.run_dir.name):
+                diag.add("run_hash")
 
             dataset_prov = DatasetProvenance(id=suite.dataset.id, case=case.name)
             record_extras = {
@@ -305,6 +325,7 @@ class AxSweepRunner:
                 logger=self._logger,
             )
             per_case_scalars.append(dict(evaluation.scalar_metrics))
+            diag.add("evaluation", evaluation.non_fatal_failures)
 
             # Stamp provenance into the run's summary.json so downstream
             # --rescore / analyze invocations can find tool, dataset, and
@@ -331,6 +352,7 @@ class AxSweepRunner:
                     result.outputs.run_dir,
                     exc_info=True,
                 )
+                diag.add("provenance_stamp")
 
             # Cache phase-2 output so future --rescore / analyze passes
             # can skip re-parsing. Failures here are non-fatal; the trial
@@ -360,6 +382,7 @@ class AxSweepRunner:
                         result.outputs.run_dir,
                         exc_info=True,
                     )
+                    diag.add("prediction_cache")
 
             if on_record_rows and evaluation.record_rows:
                 on_record_rows(list(evaluation.record_rows))
@@ -463,9 +486,16 @@ class AxSweepRunner:
                 exc_info=True,
             )
 
-    def _record_run_hash(self, run_hash: str) -> None:
+    def _record_run_hash(self, run_hash: str) -> bool:
+        """Append a run hash to the trial log; return ``False`` on a write failure.
+
+        No configured log path is not a failure (returns ``True``): there is
+        simply nothing to record. Only an actual ``OSError`` on the append is a
+        fail-soft failure the caller counts (F-08).
+        """
+
         if self._trial_log_path is None:
-            return
+            return True
         try:
             with self._trial_log_path.open("a", encoding="utf-8") as fh:
                 fh.write(f"{run_hash}\n")
@@ -476,6 +506,8 @@ class AxSweepRunner:
                 self._trial_log_path,
                 exc_info=True,
             )
+            return False
+        return True
 
 
 def _parser_fn_repr(fn: Any) -> str | None:

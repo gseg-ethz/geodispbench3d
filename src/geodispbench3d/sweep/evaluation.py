@@ -41,11 +41,17 @@ class EvaluationOutput:
     skipped phase 2 entirely); the runner caches it to disk so future
     ``--rescore`` and ``analyze`` passes can reuse it without re-running
     the parser.
+
+    ``non_fatal_failures`` counts the swallowed (fail-soft) failures inside this
+    one evaluation: a parser that raised, a metric callable that raised, and an
+    objective metric that returned a non-scalar. Each pass folds this into its
+    aggregate non-fatal-failure total (F-08).
     """
 
     scalar_metrics: Mapping[str, float]
     record_rows: Sequence[Mapping[str, Any]] = field(default_factory=list)
     prediction: Any = None
+    non_fatal_failures: int = 0
 
 
 def evaluate_trial(
@@ -71,6 +77,9 @@ def evaluate_trial(
 
     log = logger or logging.getLogger("geodispbench3d.sweep.evaluation")
 
+    # Count of swallowed fail-soft failures within this evaluation (F-08).
+    non_fatal_failures = 0
+
     ground_truth = load_ground_truth(case.ground_truth) if case.ground_truth is not None else None
 
     # ``prediction_override`` short-circuits phase 2 — the analyze flow
@@ -92,6 +101,7 @@ def evaluate_trial(
             # a None prediction instead of crashing the trial (fail-soft, F-08).
             log.exception("Output parser failed for trial in %s", trial_result.outputs.run_dir)
             prediction = None
+            non_fatal_failures += 1
     else:
         prediction = None
 
@@ -114,9 +124,11 @@ def evaluate_trial(
     for definition in metrics.objective_metrics:
         if not _gt_kind_matches(definition, gt_kind):
             continue
-        value = _invoke_metric(
+        value, raised = _invoke_metric(
             definition, registry, prediction, ground_truth, trial_meta, case_meta, log
         )
+        if raised:
+            non_fatal_failures += 1
         if value is None:
             continue
         try:
@@ -127,15 +139,18 @@ def evaluate_trial(
                 definition.id,
                 value,
             )
+            non_fatal_failures += 1
 
     extras = dict(record_extras or {})
 
     for definition in metrics.record_metrics:
         if not _gt_kind_matches(definition, gt_kind):
             continue
-        value = _invoke_metric(
+        value, raised = _invoke_metric(
             definition, registry, prediction, ground_truth, trial_meta, case_meta, log
         )
+        if raised:
+            non_fatal_failures += 1
         if value is None:
             continue
         rows_for_metric: list[Mapping[str, Any]] = (
@@ -144,7 +159,12 @@ def evaluate_trial(
         for row in rows_for_metric:
             record_rows.append({**extras, **row, "metric": definition.id})
 
-    return EvaluationOutput(scalar_metrics=scalar, record_rows=record_rows, prediction=prediction)
+    return EvaluationOutput(
+        scalar_metrics=scalar,
+        record_rows=record_rows,
+        prediction=prediction,
+        non_fatal_failures=non_fatal_failures,
+    )
 
 
 def _gt_kind_matches(definition: MetricDefinition, gt_kind: str | None) -> bool:
@@ -163,7 +183,14 @@ def _invoke_metric(
     trial_meta: Mapping[str, Any],
     case_meta: Mapping[str, Any],
     logger: logging.Logger,
-) -> Any:
+) -> tuple[Any, bool]:
+    """Invoke a metric callable, returning ``(value, raised)``.
+
+    ``raised`` is ``True`` only when the callable threw (a fail-soft skip the
+    caller counts as a non-fatal failure); a metric that legitimately returns
+    ``None`` reports ``(None, False)`` and is not counted (F-08).
+    """
+
     fn = registry.resolve(definition)
     kwargs: dict[str, Any] = dict(definition.params or {})
     needs = set(definition.needs)
@@ -176,13 +203,13 @@ def _invoke_metric(
     if not needs or "case_meta" in needs:
         kwargs["case_meta"] = case_meta
     try:
-        return fn(**kwargs)
+        return fn(**kwargs), False
     except Exception:
         # Plugin/user callable: a closed exception set is inapplicable (the
         # metric may raise anything). Stay broad so one metric bug skips that
         # metric instead of crashing the trial (fail-soft, F-08).
         logger.exception("Metric %r raised; skipping", definition.id)
-        return None
+        return None, True
 
 
 __all__ = ["EvaluationOutput", "evaluate_trial"]
