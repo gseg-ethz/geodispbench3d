@@ -26,6 +26,10 @@ With the iof3D adapter (transitively pulls in iof3D and its dependencies):
 pip install 'geodispbench3d[iof3d]'
 ```
 
+> **Note:** the `[iof3d]` extra is currently unavailable on public PyPI until
+> iof3D is published publicly. The iof3D adapter ships in the wheel but stays
+> dormant until then.
+
 With the F2S3 adapter:
 
 ```bash
@@ -38,7 +42,7 @@ With the Streamlit dashboard:
 pip install 'geodispbench3d[dashboard]'
 ```
 
-Combinable: `pip install 'geodispbench3d[iof3d,f2s3,dashboard]'`.
+Combinable: `pip install 'geodispbench3d[f2s3,dashboard]'`.
 
 ## Quickstart
 
@@ -63,7 +67,7 @@ in your own tool.
 ```
 src/
 ├── geodispbench3d/                  framework (no tool deps)
-├── geodispbench3d_iof3d/            iof3D adapter (gated by [iof3d] extra)
+├── geodispbench3d_iof3d/            iof3D adapter (ships in the wheel; dormant until iof3D is public)
 └── geodispbench3d_f2s3/             F2S3 adapter (gated by [f2s3] extra)
 
 benchmarks/
@@ -79,4 +83,4 @@ tests/                               core / iof3d / f2s3 test suites
 
 ## License
 
-Proprietary — see `LICENSE`.
+Released under the BSD-3-Clause license — see `LICENSE`.
