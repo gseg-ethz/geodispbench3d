@@ -42,10 +42,37 @@ from geodispbench3d.sweep.trial_record import (
     update_trial_record,
     write_trial_summary,
 )
-from geodispbench3d.tool.base import ToolAdapter, TrialRequest
+from geodispbench3d.tool.base import ToolAdapter, TrialRequest, TrialResult
 
 from .evaluation import evaluate_trial
 from .parameters import SweepConfig
+
+
+class TrialExecutionError(Exception):
+    """Signals a failed trial (an adapter ``TrialResult`` with ``success=False``).
+
+    Raised by the shared :func:`_raise_if_failed` guard so a failed adapter
+    result is routed to Ax via ``log_trial_failure`` (a genuine failed trial)
+    instead of being scored. Carries the adapter's ``error_kind`` so the
+    per-trial handler classifies a timeout (non-exit-driving, D-05) apart from a
+    genuine crash (exit-driving).
+    """
+
+    def __init__(self, message: str, *, error_kind: str | None = None) -> None:
+        super().__init__(message)
+        self.error_kind = error_kind
+
+
+def _raise_if_failed(result: TrialResult) -> None:
+    """Shared success guard (RESOLVED-B): raise on ``success=False``.
+
+    Called from BOTH the suite path (``_evaluate_across_cases``) and the legacy
+    ``_default_executor`` so a failed result is never scored on either entry
+    point — it is reported to Ax as a failed trial instead.
+    """
+
+    if not result.success:
+        raise TrialExecutionError(result.error or "trial failed", error_kind=result.error_kind)
 
 
 @dataclass(frozen=True)
@@ -65,6 +92,24 @@ class SweepRunSummary:
     the whole sweep (per-case evaluation skips, provenance-stamp / prediction-
     cache / run-hash / trial-summary write failures), surfaced as the CLI's
     aggregate "N non-fatal failures" line (F-08).
+
+    Extended additively by 03-01 with the typed failure counters that separate
+    timeouts (non-exit-driving per D-05) from genuine tool crashes and
+    parser/eval failures, plus a ``successful_trials`` count. Plan 02 derives
+    exit 1 from ``trial_failures`` + ``eval_failures`` (NOT ``timeouts``), and
+    treats ``successful_trials == 0`` (paired with ``best_trial is None``) as the
+    all-failed-sweep exit-1 trigger — even a timeouts-only sweep that optimized
+    nothing (RESOLVED-A). The new fields keep their position AFTER
+    ``non_fatal_failures`` so existing positional/keyword constructors stay valid.
+
+    * ``timeouts`` — trials killed at the wall-clock timeout (D-05: NON-FATAL for
+      the exit code; its own visible category, not folded into other counters).
+    * ``trial_failures`` — genuine tool/runtime crashes (nonzero exit, missing
+      output, entry-not-found, or an unexpected runner bug). Exit-driving.
+    * ``eval_failures`` — parser/metric failures (the ``"evaluation"`` diag kind).
+      Exit-driving.
+    * ``successful_trials`` — trials that reached ``complete_trial``. ``0`` is the
+      zero-successful-trial exit-1 trigger Plan 02 consumes.
     """
 
     best_trial: Any
@@ -72,6 +117,10 @@ class SweepRunSummary:
     objective_cases_finite: int = 0
     objective_cases_total: int = 0
     non_fatal_failures: int = 0
+    timeouts: int = 0
+    trial_failures: int = 0
+    eval_failures: int = 0
+    successful_trials: int = 0
 
 
 class AxSweepRunner:
@@ -203,13 +252,34 @@ class AxSweepRunner:
         finally:
             self._adapter.teardown()
 
-        return self._ax.get_best_trial()
+        return self._resolve_best_trial()
 
     def _default_executor(self, parameters: Mapping[str, Any]) -> Mapping[str, float]:
         request = TrialRequest(parameters=parameters)
         result = self._adapter.run_trial(request)
+        # RESOLVED-B: honor success=False on the legacy path too. The raise
+        # propagates to run()'s per-trial except handler, which calls
+        # log_trial_failure — so a failed result becomes a real failed Ax trial
+        # (reported, not scored) on the iof3d-ax CLI path as well.
+        _raise_if_failed(result)
         self._record_run_hash(result.outputs.run_dir.name)
         return dict(result.scalar_metrics)
+
+    def _resolve_best_trial(self) -> Any:
+        """Return Ax's best trial, or ``None`` when no trial completed.
+
+        RESOLVED-A: an all-failed / all-timeout sweep leaves Ax with no completed
+        trial, and ``get_best_trial`` can raise in that state. This shared guard
+        (called from BOTH ``run()`` and ``run_with_suite()``) never lets a raw Ax
+        exception escape the trial loop — it returns ``None`` so the runner can
+        report a valid summary with ``best_trial is None``.
+        """
+
+        try:
+            return self._ax.get_best_trial()
+        except Exception:  # pragma: no cover - Ax has no completed/best trial
+            self._logger.info("No best trial available (no successful trials in this sweep)")
+            return None
 
     def run_with_suite(
         self,
@@ -245,6 +315,14 @@ class AxSweepRunner:
 
         total_objective_cases_finite = 0
         total_objective_cases = 0
+        # Typed failure tallies (review HIGH #2 + Warning 1). ``timeouts`` is
+        # NON-FATAL for the exit code (D-05); ``trial_failures`` (crashes) and
+        # the ``"evaluation"`` diag kind (parser/metric) are exit-driving in
+        # Plan 02. ``successful_trials`` counts completions (zero => RESOLVED-A
+        # all-failed exit-1 trigger).
+        timeouts = 0
+        trial_failures = 0
+        successful_trials = 0
         # One PassDiagnostics for the whole sweep; every fail-soft site records
         # into it and the total rides out on SweepRunSummary (F-08).
         pass_diag = PassDiagnostics()
@@ -266,18 +344,45 @@ class AxSweepRunner:
                     total_objective_cases_finite += cases_finite
                     total_objective_cases += cases_total
                     self._ax.complete_trial(trial_index=ax_trial_index, raw_data=aggregated)
-                except Exception as exc:  # pragma: no cover - defensive
-                    self._logger.exception("Trial %s failed: %s", ax_trial_index, exc)
+                    successful_trials += 1
+                except TrialExecutionError as exc:
+                    # A failed adapter result (success=False): report it to Ax as
+                    # a genuine failed trial (NOT complete_trial) and continue the
+                    # sweep. Classify on the explicit error_kind so a timeout is
+                    # split off from a crash (D-05 / Warning 1).
+                    if exc.error_kind == "timeout":
+                        timeouts += 1
+                        self._logger.warning(
+                            "Trial %s timed out; recorded as a timeout (non-fatal)",
+                            ax_trial_index,
+                        )
+                    else:
+                        trial_failures += 1
+                        self._logger.warning(
+                            "Trial %s failed (%s); recorded as a trial failure",
+                            ax_trial_index,
+                            exc,
+                        )
+                    self._ax.log_trial_failure(trial_index=ax_trial_index)
+                except Exception as exc:  # pragma: no cover - defensive: a real bug
+                    # An unexpected (non-TrialExecutionError) exception is a
+                    # genuine runner bug -> exit-driving trial_failures.
+                    self._logger.exception("Trial %s failed unexpectedly: %s", ax_trial_index, exc)
+                    trial_failures += 1
                     self._ax.log_trial_failure(trial_index=ax_trial_index)
         finally:
             self._adapter.teardown()
 
         return SweepRunSummary(
-            best_trial=self._ax.get_best_trial(),
+            best_trial=self._resolve_best_trial(),
             objective_name=self._objective_name,
             objective_cases_finite=total_objective_cases_finite,
             objective_cases_total=total_objective_cases,
             non_fatal_failures=pass_diag.non_fatal_failures,
+            timeouts=timeouts,
+            trial_failures=trial_failures,
+            eval_failures=pass_diag.by_kind.get("evaluation", 0),
+            successful_trials=successful_trials,
         )
 
     def _evaluate_across_cases(
@@ -309,6 +414,19 @@ class AxSweepRunner:
         for case in cases:
             request = TrialRequest(parameters=parameters, case_name=case.name)
             result = self._adapter.run_trial(request)
+            # THE CENTRAL CONTRACT (review HIGH #1, F-32/F-07): a failed adapter
+            # result is NOT scored. Raise BEFORE evaluate_trial / provenance /
+            # cache side effects so the case loop unwinds and the per-trial
+            # handler reports a failed Ax trial (log_trial_failure). The guard is
+            # shared with the legacy path (RESOLVED-B).
+            if not result.success:
+                self._logger.warning(
+                    "Trial %s case %s failed (%s); skipping scoring, reporting failure to Ax",
+                    ax_trial_index,
+                    case.name,
+                    result.error,
+                )
+                _raise_if_failed(result)
             if not self._record_run_hash(result.outputs.run_dir.name):
                 diag.add("run_hash")
 
@@ -337,7 +455,7 @@ class AxSweepRunner:
             diag.add("evaluation", evaluation.non_fatal_failures)
 
             # Stamp provenance into the run's summary.json so downstream
-            # --rescore / analyze invocations can find tool, dataset, and
+            # rescore / analyze invocations can find tool, dataset, and
             # parser context without consulting the original suite YAML.
             try:
                 update_trial_record(
@@ -359,7 +477,7 @@ class AxSweepRunner:
                 )
                 diag.add("provenance_stamp")
 
-            # Cache phase-2 output so future --rescore / analyze passes
+            # Cache phase-2 output so future rescore / analyze passes
             # can skip re-parsing. Failures here are non-fatal; the trial
             # itself succeeded and Ax already has its scalar.
             predictions_root = getattr(suite.results, "predictions_root", None)
@@ -551,4 +669,4 @@ def _normalize_trial_data(trial_data: Any) -> tuple[int, dict[str, Any]]:
     return trial_index, params
 
 
-__all__ = ["AxSweepRunner", "SweepRunSummary"]
+__all__ = ["AxSweepRunner", "SweepRunSummary", "TrialExecutionError"]

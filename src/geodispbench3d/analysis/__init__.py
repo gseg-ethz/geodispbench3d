@@ -1,6 +1,6 @@
 """Tool-agnostic analysis: re-score cached predictions across tools.
 
-Where a suite's ``run --rescore`` is bound to one tool's run directories
+Where a suite's ``rescore`` pass is bound to one tool's run directories
 and runs phase 2 against tool-specific outputs, an analysis YAML works
 purely from the predictions cache. Predictions live in the common
 ``{per_point: [...]}`` shape, so an analysis can mix iof3D and F2S3

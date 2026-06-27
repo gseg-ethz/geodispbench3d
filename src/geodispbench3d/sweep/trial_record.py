@@ -12,7 +12,7 @@ Layout under each run directory::
 The summary structure is intentionally flat and forward-compatible:
 fields added in future versions are written with sensible defaults; old
 summaries missing those fields are read with ``None``. ``rescore_log`` is
-the one append-only field — every ``--rescore`` pass appends one entry
+the one append-only field — every ``rescore`` pass appends one entry
 so the audit trail is preserved.
 """
 
@@ -57,9 +57,9 @@ class DatasetProvenance:
 class ParserProvenance:
     """Phase-2 parser configuration that produced the prediction.
 
-    Storing this lets ``--rescore --reuse-parser-options`` reproduce the
-    exact phase-2 output from a previous trial, while plain ``--rescore``
-    can override with the suite's current options.
+    Storing this lets ``rescore --reuse-parser-options`` reproduce the
+    exact phase-2 output from a previous trial, while a plain ``rescore``
+    pass can override with the suite's current options.
     """
 
     fn: str | None = None
@@ -91,10 +91,21 @@ def parser_fn_repr(fn: Any) -> str | None:
 # ---------------------------------------------------------------------------
 
 
+def trial_summary_file(run_dir: Path) -> Path:
+    """Path to a run dir's trial summary, *without* creating anything.
+
+    Pure path constructor for read/membership checks (e.g. walking a results
+    tree to discover real run dirs). Use :func:`trial_record_path` instead when
+    you intend to write — it ensures the ``ax_trial/`` parent exists.
+    """
+
+    return Path(run_dir) / "ax_trial" / "summary.json"
+
+
 def trial_record_path(run_dir: Path) -> Path:
-    out_dir = Path(run_dir) / "ax_trial"
-    out_dir.mkdir(parents=True, exist_ok=True)
-    return out_dir / "summary.json"
+    path = trial_summary_file(run_dir)
+    path.parent.mkdir(parents=True, exist_ok=True)
+    return path
 
 
 def load_trial_record(
@@ -276,7 +287,7 @@ def store_trial_failure(
 
 
 # ---------------------------------------------------------------------------
-# Provenance read-back (used by --rescore + analyze)
+# Provenance read-back (used by the rescore + analyze passes)
 # ---------------------------------------------------------------------------
 
 
@@ -350,6 +361,7 @@ __all__ = [
     "store_trial_failure",
     "store_trial_metadata",
     "trial_record_path",
+    "trial_summary_file",
     "trial_summary_path",
     "update_trial_record",
     "write_trial_record",

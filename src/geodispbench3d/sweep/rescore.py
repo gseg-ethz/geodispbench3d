@@ -1,4 +1,4 @@
-"""``--rescore`` mode: re-evaluate existing run dirs without invoking the tool.
+"""``rescore`` mode: re-evaluate existing run dirs without invoking the tool.
 
 The flow walks every run directory under a suite's ``results.run_dir_root``
 that carries an ``ax_trial/summary.json`` and, per run:
@@ -49,6 +49,7 @@ from geodispbench3d.sweep.trial_record import (
     parser_fn_repr,
     read_provenance,
     trial_record_path,
+    trial_summary_file,
 )
 from geodispbench3d.tool.base import TrialOutputs, TrialResult
 
@@ -73,6 +74,12 @@ class RescoreSummary:
     pass (corrupt trial-record / cache reads, per-run evaluation skips, cache
     writes, and rescore-log appends), surfaced as the CLI's aggregate
     "N non-fatal failures" line (F-08).
+
+    ``eval_failures`` (03-01) is the genuine-parser/metric subset — the
+    ``"evaluation"`` diag kind — separated from the benign cache/append
+    degradation that also rides in ``non_fatal_failures``. Plan 02 keys the
+    rescore exit-1 condition off ``parser_misses`` OR ``eval_failures``, never
+    the collapsed ``non_fatal_failures`` total.
     """
 
     total: int = 0
@@ -83,6 +90,7 @@ class RescoreSummary:
     cache_hits: int = 0
     rows_emitted: int = 0
     non_fatal_failures: int = 0
+    eval_failures: int = 0
 
 
 def rescore_suite(
@@ -158,7 +166,11 @@ def rescore_suite(
         )
         summary.cache_hits += int(outcome.cache_hit)
         summary.parser_misses += int(outcome.parser_failed)
-        diag.add("rescore_one", outcome.non_fatal_failures)
+        # Record genuine parser/metric errors under the "evaluation" kind and
+        # benign cache/append degradation under a distinct kind, so eval_failures
+        # is a true subset readout and non_fatal_failures stays the aggregate.
+        diag.add("evaluation", outcome.eval_failures)
+        diag.add("rescore_degradation", outcome.degradation_failures)
         if outcome.rows:
             summary.rows_emitted += len(outcome.rows)
             if on_record_rows:
@@ -167,6 +179,7 @@ def rescore_suite(
             summary.succeeded += 1
 
     summary.non_fatal_failures = diag.non_fatal_failures
+    summary.eval_failures = diag.by_kind.get("evaluation", 0)
     log.info(
         "rescore done: succeeded=%d total=%d cache_hits=%d parser_failed=%d rows=%d "
         "non_fatal_failures=%d",
@@ -191,7 +204,12 @@ class _RescoreOutcome:
     cache_hit: bool = False
     parser_failed: bool = False
     rows: list[Mapping[str, Any]] | None = None
-    non_fatal_failures: int = 0
+    # 03-01: typed apart at the source so genuine parser/metric errors are never
+    # summed with benign observability degradation. ``eval_failures`` is the
+    # parser-failed eval + the inner evaluation non-fatals; ``degradation_failures``
+    # is the cache-write + rescore-log-append degradation.
+    eval_failures: int = 0
+    degradation_failures: int = 0
 
 
 def _walk_run_dirs(suite: Any, log: logging.Logger) -> list[Path]:
@@ -203,7 +221,11 @@ def _walk_run_dirs(suite: Any, log: logging.Logger) -> list[Path]:
     if not root_path.is_dir():
         log.warning("rescore: run_dir_root %s does not exist", root_path)
         return []
-    return sorted(p for p in root_path.iterdir() if p.is_dir() and trial_record_path(p).is_file())
+    # Use the *pure* path constructor here: this walk touches every immediate
+    # child of run_dir_root, including non-run-dir siblings. The mkdir side
+    # effect of ``trial_record_path`` would otherwise litter the results tree
+    # with spurious empty ``ax_trial/`` dirs under unrelated directories (WR-01).
+    return sorted(p for p in root_path.iterdir() if p.is_dir() and trial_summary_file(p).is_file())
 
 
 def _resolve_case(
@@ -294,10 +316,10 @@ def _rescore_one(
         # (fail-soft, F-08).
         log.exception("rescore: evaluate_trial failed for %s", run_dir)
         outcome.parser_failed = True
-        outcome.non_fatal_failures += 1
+        outcome.eval_failures += 1
         return outcome
 
-    outcome.non_fatal_failures += evaluation.non_fatal_failures
+    outcome.eval_failures += evaluation.non_fatal_failures
 
     if evaluation.prediction is None and parser_fn is not None and prediction is None:
         # Parser was supposed to run and produced nothing usable.
@@ -334,7 +356,7 @@ def _rescore_one(
             )
         except (OSError, TypeError):  # cache write failures shouldn't fail rescoring
             log.warning("rescore: cache write failed for %s", run_dir, exc_info=True)
-            outcome.non_fatal_failures += 1
+            outcome.degradation_failures += 1
 
     # Audit log appended to the trial summary.
     try:
@@ -356,7 +378,7 @@ def _rescore_one(
         # .append; OSError/TypeError cover the I/O + serialization paths. Stays
         # fail-soft (the rescore itself already succeeded).
         log.warning("rescore: append_rescore_entry failed for %s", run_dir, exc_info=True)
-        outcome.non_fatal_failures += 1
+        outcome.degradation_failures += 1
 
     outcome.scored = True
     outcome.rows = list(evaluation.record_rows)
