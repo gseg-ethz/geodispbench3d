@@ -162,12 +162,18 @@ def _cmd_sweep(
         logger=logger,
     )
 
-    best = runner.run_with_suite(
+    result = runner.run_with_suite(
         suite=suite,
         max_trials=max_trials,
         on_record_rows=on_record_rows,
     )
-    logger.info("Best trial: %s", best)
+    logger.info("Best trial: %s", result.best_trial)
+    logger.info(
+        "Objective %s: %d/%d cases finite across the sweep",
+        result.objective_name,
+        result.objective_cases_finite,
+        result.objective_cases_total,
+    )
     return 0
 
 

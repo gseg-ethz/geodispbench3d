@@ -22,7 +22,7 @@ import hashlib
 import json
 from collections.abc import Mapping, Sequence
 from dataclasses import asdict, dataclass, field
-from datetime import datetime
+from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
 
@@ -95,6 +95,36 @@ def write_trial_record(path: Path, payload: Mapping[str, Any]) -> None:
     with tmp.open("w", encoding="utf-8") as fh:
         json.dump(payload, fh, indent=2, sort_keys=True, default=str)
     tmp.replace(path)
+
+
+def trial_summary_path(results_root: Path, trial_index: int) -> Path:
+    """Path of the dedicated trial-level summary artifact.
+
+    Distinct from the per-case ``<run_dir>/ax_trial/summary.json``: this is a
+    single per-trial JSON under ``<results_root>/trial_summaries/`` carrying the
+    post-aggregation finite-case signal (F-05).
+    """
+
+    out_dir = Path(results_root) / "trial_summaries"
+    out_dir.mkdir(parents=True, exist_ok=True)
+    return out_dir / f"trial_{trial_index}.json"
+
+
+def write_trial_summary(results_root: Path, trial_index: int, payload: Mapping[str, Any]) -> Path:
+    """Atomically write the dedicated trial-level summary artifact.
+
+    Stamps ``recorded_at`` (offset-aware UTC) when the caller has not supplied
+    it, then writes via the same tmp+replace pattern as ``write_trial_record``.
+    """
+
+    path = trial_summary_path(results_root, trial_index)
+    record = dict(payload)
+    record.setdefault("recorded_at", datetime.now(UTC).isoformat(timespec="seconds"))
+    tmp = path.with_suffix(".tmp")
+    with tmp.open("w", encoding="utf-8") as fh:
+        json.dump(record, fh, indent=2, sort_keys=True, default=str)
+    tmp.replace(path)
+    return path
 
 
 def update_trial_record(run_dir: Path, updates: Mapping[str, Any]) -> None:
@@ -299,6 +329,8 @@ __all__ = [
     "store_trial_failure",
     "store_trial_metadata",
     "trial_record_path",
+    "trial_summary_path",
     "update_trial_record",
     "write_trial_record",
+    "write_trial_summary",
 ]

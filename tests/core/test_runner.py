@@ -29,6 +29,7 @@ timestamp suffix is asserted anywhere — F-09 will switch isoformat output to
 from __future__ import annotations
 
 import json
+import logging
 import sys
 import textwrap
 from collections.abc import Mapping
@@ -42,7 +43,7 @@ from geodispbench3d.metrics.registry import MetricRegistry
 from geodispbench3d.suite.loader import load_suite
 from geodispbench3d.sweep import runner as runner_mod
 from geodispbench3d.sweep.parameters import SweepConfig, SweepParameter, build_parameter_specs
-from geodispbench3d.sweep.runner import AxSweepRunner, _normalize_trial_data
+from geodispbench3d.sweep.runner import AxSweepRunner, SweepRunSummary, _normalize_trial_data
 from geodispbench3d.tool.base import ToolAdapter, TrialOutputs, TrialRequest, TrialResult
 
 # ---------------------------------------------------------------------------
@@ -269,7 +270,7 @@ def test_trial_loop_happy_path_and_teardown(
     )
     runner, fake = _make_runner(monkeypatch, adapter)
 
-    best = runner.run_with_suite(suite=suite, max_trials=3)
+    result = runner.run_with_suite(suite=suite, max_trials=3)
 
     # Prepare ran once before the loop; teardown ran via the finally even on
     # the all-success path (runner.py:218-219).
@@ -287,8 +288,13 @@ def test_trial_loop_happy_path_and_teardown(
         assert "median_displacement_error" in entry["raw_data"]
         assert entry["raw_data"]["median_displacement_error"] == pytest.approx(0.4)
 
-    # get_best_trial's return propagates out of run_with_suite unchanged.
-    assert best is fake.best_sentinel
+    # F-05: run_with_suite now returns a SweepRunSummary; get_best_trial's
+    # return propagates via .best_trial. All three single-case trials are finite.
+    assert isinstance(result, SweepRunSummary)
+    assert result.best_trial is fake.best_sentinel
+    assert result.objective_name == "median_displacement_error"
+    assert result.objective_cases_finite == 3
+    assert result.objective_cases_total == 3
 
 
 def test_normalize_trial_data_tuple_int_dict() -> None:
@@ -342,12 +348,13 @@ def test_single_case_aggregation_short_circuits(
     adapter = StubAdapter(run_root=tmp_path / "out", predictions={"solo": _PRED_ERR_04})
     runner, _fake = _make_runner(monkeypatch, adapter)
 
-    aggregated = runner._evaluate_across_cases(
+    aggregated, finite, total = runner._evaluate_across_cases(
         {"alpha": 0.5}, list(suite.dataset.cases), suite, MetricRegistry(), 0, None
     )
 
     assert set(aggregated) == {"median_displacement_error"}
     assert aggregated["median_displacement_error"] == pytest.approx(0.4)
+    assert (finite, total) == (1, 1)
 
 
 def test_multi_case_aggregation_means_finite_values(
@@ -362,11 +369,13 @@ def test_multi_case_aggregation_means_finite_values(
     )
     runner, _fake = _make_runner(monkeypatch, adapter)
 
-    aggregated = runner._evaluate_across_cases(
+    aggregated, finite, total = runner._evaluate_across_cases(
         {"alpha": 0.5}, list(suite.dataset.cases), suite, MetricRegistry(), 0, None
     )
 
+    # All-finite multi-case mean is unchanged from pre-F-05 (0.4, 0.6 -> 0.5).
     assert aggregated["median_displacement_error"] == pytest.approx(0.5)
+    assert (finite, total) == (2, 2)
 
 
 def test_multi_case_partial_failure_ignores_nan_survivor_mean(
@@ -374,10 +383,11 @@ def test_multi_case_partial_failure_ignores_nan_survivor_mean(
 ) -> None:
     """Partial failure: one NaN case is dropped; mean is taken over finite survivors.
 
-    REGRESSION ANCHOR: this pins the CURRENT NaN-ignoring-mean behavior. F-05
-    (plan 02-03) and F-08 (plan 02-05) will EXTEND this path to surface the
-    finite-case count / partial-failure signal — when they land, this test is
-    the contract they must consciously update. Assert ONLY today's behavior.
+    REGRESSION ANCHOR: this pins the NaN-ignoring-mean math, which F-05 keeps
+    byte-for-byte unchanged. F-05 (plan 02-03) EXTENDED this path so that the
+    objective-specific finite/total counts are now RETURNED (the
+    partial-failure signal that was previously invisible); F-08 (plan 02-05)
+    will extend it further. The mean value below is the pre-F-05 contract.
     """
 
     suite = _bootstrap_suite(tmp_path, ["good", "bad"])
@@ -387,17 +397,20 @@ def test_multi_case_partial_failure_ignores_nan_survivor_mean(
     )
     runner, _fake = _make_runner(monkeypatch, adapter)
 
-    aggregated = runner._evaluate_across_cases(
+    aggregated, finite, total = runner._evaluate_across_cases(
         {"alpha": 0.5}, list(suite.dataset.cases), suite, MetricRegistry(), 0, None
     )
 
-    # The NaN survivor is silently dropped; the mean is the good case alone.
-    # (Today there is NO signal that a case failed — that is the F-05/F-08 gap.)
+    # The NaN survivor is silently dropped FROM THE MEAN; the mean is the good
+    # case alone (math unchanged). F-05 now also surfaces that a case failed.
     import math
 
     value = aggregated["median_displacement_error"]
     assert not math.isnan(value)
     assert value == pytest.approx(0.4)
+    # F-05: partial failure is no longer invisible — finite < total.
+    assert finite == total - 1
+    assert (finite, total) == (1, 2)
 
 
 def test_provenance_blocks_stamped_into_summary_json(
@@ -421,3 +434,67 @@ def test_provenance_blocks_stamped_into_summary_json(
     assert record["dataset"]["id"] == "stub-dataset"
     assert record["dataset"]["case"] == "solo"
     assert "parse" in record["parser"]["fn"]
+
+
+# ---------------------------------------------------------------------------
+# Task 3 (F-05): objective-specific finite-case signal surfaced OFF the Ax
+# objective via per-trial log line + trial-level artifact + SweepRunSummary.
+# ---------------------------------------------------------------------------
+
+
+def test_f05_partial_failure_surfaced_off_ax_objective(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    caplog: pytest.LogCaptureFixture,
+) -> None:
+    """F-05: a multi-case one-NaN trial surfaces objective_cases_finite/total
+    three ways (log line, trial-level artifact, SweepRunSummary), and the
+    signal is ABSENT from the Ax complete_trial(raw_data=...) payload."""
+
+    suite = _bootstrap_suite(tmp_path, ["good", "bad"])
+    adapter = StubAdapter(
+        run_root=tmp_path / "out",
+        predictions={"good": _PRED_ERR_04, "bad": _PRED_NAN},
+    )
+    runner, fake = _make_runner(monkeypatch, adapter)
+
+    with caplog.at_level(logging.WARNING, logger="geodispbench3d.sweep"):
+        result = runner.run_with_suite(suite=suite, max_trials=1)
+
+    # (c) SweepRunSummary carries the across-trial aggregate (one trial here).
+    assert isinstance(result, SweepRunSummary)
+    assert result.best_trial is fake.best_sentinel
+    assert result.objective_name == "median_displacement_error"
+    assert result.objective_cases_finite == 1
+    assert result.objective_cases_total == 2
+
+    # (a) The per-trial log line names the objective + finite/total.
+    assert any(
+        "median_displacement_error" in r.getMessage() and "1/2" in r.getMessage()
+        for r in caplog.records
+    ), [r.getMessage() for r in caplog.records]
+
+    # (b) The dedicated trial-level artifact carries the same signal and is
+    # distinct from the per-case ax_trial/summary.json.
+    assert suite.results.run_dir_root is not None
+    summary_path = suite.results.run_dir_root / "trial_summaries" / "trial_0.json"
+    assert summary_path.is_file()
+    artifact = json.loads(summary_path.read_text(encoding="utf-8"))
+    assert artifact["objective_name"] == "median_displacement_error"
+    assert artifact["objective_cases_finite"] == artifact["objective_cases_total"] - 1
+    assert artifact["objective_cases_finite"] == 1
+    assert artifact["objective_cases_total"] == 2
+    assert artifact["aggregated_objective"] == pytest.approx(0.4)
+
+    # (d) The Ax raw_data payload is UNCHANGED — no finite-case key leaked in,
+    # and the objective itself still flows (survivor mean = good case alone).
+    assert len(fake.completed) == 1
+    raw_data = fake.completed[0]["raw_data"]
+    for forbidden in (
+        "objective_cases_finite",
+        "objective_cases_total",
+        "cases_finite",
+        "cases_total",
+    ):
+        assert forbidden not in raw_data
+    assert raw_data["median_displacement_error"] == pytest.approx(0.4)
