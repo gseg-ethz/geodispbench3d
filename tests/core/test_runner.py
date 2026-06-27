@@ -611,17 +611,21 @@ def test_cli_sweep_emits_non_fatal_failures_line(
             pass
 
         def run_with_suite(self, *, suite: Any, max_trials: int, on_record_rows: Any = None) -> Any:
+            # successful_trials=1 so the sweep is a genuine success under the
+            # post-03-02 exit taxonomy (RESOLVED-A: successful_trials==0 => exit 1);
+            # this exercises the "exits 0 WITH non-fatal degradation" path.
             return SweepRunSummary(
-                best_trial=None,
+                best_trial=object(),
                 objective_name="median_displacement_error",
                 objective_cases_finite=1,
                 objective_cases_total=2,
                 non_fatal_failures=3,
+                successful_trials=1,
             )
 
     monkeypatch.setattr("geodispbench3d.sweep.runner.AxSweepRunner", _FakeRunner)
 
-    args = argparse.Namespace(max_trials=1)
+    args = argparse.Namespace(max_trials=1, timeout=None)
     logger = logging.getLogger("geodispbench3d.cli")
     with caplog.at_level(logging.INFO, logger="geodispbench3d.cli"):
         rc = cli._cmd_sweep(args, suite, None, logger)

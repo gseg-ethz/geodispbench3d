@@ -252,11 +252,19 @@ def _cmd_sweep(
 ) -> int:
     from geodispbench3d.sweep.parameters import SweepConfig, build_parameter_specs
     from geodispbench3d.sweep.runner import AxSweepRunner
+    from geodispbench3d.tool.cli_adapter import CliToolAdapter
 
     # Shared guard for the v2 EXEC-01 seam: raise deterministically rather than
     # silently no-op an unsupported parallel_trials / override_tool_mode (D-09).
     # run_with_suite enforces the same guard, so neither path can bypass it.
     suite.execution.ensure_supported()
+
+    # --timeout overrides the tool's YAML execution.timeout_seconds through the
+    # public seam (D-04); never the private _timeout. `is not None` (NOT
+    # truthiness) so `--timeout 0` is honored and means "no timeout" per the
+    # adapter's <= 0 semantics. Applies only to CLI-subprocess tools.
+    if args.timeout is not None and isinstance(suite.tool.adapter, CliToolAdapter):
+        suite.tool.adapter.set_timeout_override(args.timeout)
 
     max_trials = args.max_trials or suite.search.max_trials
 
@@ -302,7 +310,27 @@ def _cmd_sweep(
     logger.info(
         "%d non-fatal failures (swallowed, fail-soft) during the sweep", result.non_fatal_failures
     )
-    return 0
+    # Dedicated, distinct visibility for the typed breakdown (review Warning 1 /
+    # D-05): timeouts get their OWN visible line and are NON-FATAL for the exit
+    # code; tool crashes + eval failures are the exit-driving counters, surfaced
+    # on a separate line from the aggregate non-fatal degradation line above.
+    logger.info("%d trials timed out", result.timeouts)
+    logger.info(
+        "%d trial failures, %d evaluation failures",
+        result.trial_failures,
+        result.eval_failures,
+    )
+    # Exit 1 on a genuine failure (D-08 / F-06 / review HIGH #2): a real tool
+    # crash (trial_failures) or parser/metric failure (eval_failures). Individual
+    # timeouts are EXCLUDED from this condition (locked D-05). However, a sweep
+    # that produced ZERO successful trials optimized nothing and exits 1 even when
+    # every failure was a timeout (RESOLVED-A: successful_trials == 0 <=>
+    # best_trial is None).
+    return (
+        1
+        if (result.trial_failures or result.eval_failures or result.successful_trials == 0)
+        else 0
+    )
 
 
 def _cmd_rescore(args: argparse.Namespace) -> int:
@@ -350,7 +378,10 @@ def _cmd_rescore(args: argparse.Namespace) -> int:
         "%d non-fatal failures (swallowed, fail-soft) during the rescore",
         summary.non_fatal_failures,
     )
-    return 0 if summary.succeeded == summary.total else 1
+    # Exit 1 only on a genuine error (D-08 / F-06 / review HIGH #2): a parser miss
+    # or an evaluation failure. Pre-existing skipped_failed / skipped_no_summary
+    # run dirs are NOT errors of this pass, so a clean rescore over them exits 0.
+    return 1 if (summary.parser_misses or summary.eval_failures) else 0
 
 
 def _cmd_analyze(args: argparse.Namespace) -> int:
@@ -396,7 +427,10 @@ def _cmd_analyze(args: argparse.Namespace) -> int:
         "%d non-fatal failures (swallowed, fail-soft) during the analyze",
         summary.non_fatal_failures,
     )
-    return 0 if summary.succeeded == summary.total else 1
+    # Exit 1 only on a genuine error (D-08 / F-06 / review HIGH #2): an unreadable
+    # prediction or an evaluation failure. skipped_no_case is a benign skip (a
+    # prediction for another dataset), analogous to rescore's skipped_failed.
+    return 1 if (summary.skipped_unreadable or summary.eval_failures) else 0
 
 
 def _cmd_dashboard(args: argparse.Namespace) -> int:
