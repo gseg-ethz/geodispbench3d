@@ -132,11 +132,11 @@ Decimal phases appear between their surrounding integers in numeric order.
 
 **Both resolved in 04-CONTEXT.md:** (D-01) single wheel, ship `geodispbench3d_iof3d` dormant via a PEP 562 import guard + graceful `iof3d-ax` launcher; (D-05) add `pchandler ~= 2.1` to the `f2s3` extra (F2S3 stays fully runnable).
 
-**Plans**: 2 plans
+**Plans**: 1/2 plans executed
 
 **Wave 1**
 
-- [ ] 04-01-PLAN.md — Licensing & metadata reconciliation: README License (Proprietary → BSD-3-Clause) + no-timeline `[iof3d]` note, `pyproject.toml` classifiers (drop `Private`, add Beta/audience/topic) + Documentation/Changelog URLs, confirm `CITATION.cff`/`LICENSE` (LIC-01…04)
+- [x] 04-01-PLAN.md — Licensing & metadata reconciliation: README License (Proprietary → BSD-3-Clause) + no-timeline `[iof3d]` note, `pyproject.toml` classifiers (drop `Private`, add Beta/audience/topic) + Documentation/Changelog URLs, confirm `CITATION.cff`/`LICENSE` (LIC-01…04)
 
 **Wave 2** *(blocked on 04-01 — shared `pyproject.toml`)*
 
@@ -169,5 +169,5 @@ Decimal phases appear between their surrounding integers in numeric order.
 | 1. Code-Health Audit | 2/2 | Complete    | 2026-06-26 |
 | 2. Targeted Fixes | 7/7 | Complete    | 2026-06-27 |
 | 3. CLI Hardening | 4/4 | Complete    | 2026-06-27 |
-| 4. Licensing, Metadata & Packaging | 0/2 | Not started | - |
+| 4. Licensing, Metadata & Packaging | 1/2 | In Progress|  |
 | 5. CI/CD & Release | 0/? | Not started | - |

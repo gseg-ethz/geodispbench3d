@@ -2,18 +2,18 @@
 gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
-current_phase: 4
-current_phase_name: Licensing, Metadata & Packaging
-status: "Phase 03 shipped — PR #3 (base develop)"
+current_phase: 04
+current_phase_name: licensing-metadata-packaging
+status: executing
 stopped_at: Phase 4 context gathered
-last_updated: "2026-06-27T19:07:59.242Z"
+last_updated: "2026-06-27T19:19:25.665Z"
 last_activity: 2026-06-27
-last_activity_desc: Phase 04 planning complete
+last_activity_desc: Phase 04 execution started
 progress:
   total_phases: 5
   completed_phases: 3
-  total_plans: 13
-  completed_plans: 13
+  total_plans: 15
+  completed_plans: 14
   percent: 60
 ---
 
@@ -24,14 +24,14 @@ progress:
 See: .planning/PROJECT.md (updated 2026-06-26)
 
 **Core value:** Nothing is published to PyPI until the codebase is demonstrably lean, correct, well-tested, and its CLI-integration story is sound.
-**Current focus:** Phase 03 — cli-hardening
+**Current focus:** Phase 04 — licensing-metadata-packaging
 
 ## Current Position
 
-Phase: 4 — Licensing, Metadata & Packaging
-Plan: Not started
-Status: Phase 03 shipped — PR #3 (base develop)
-Last activity: 2026-06-27 — Phase 04 planning complete
+Phase: 04 (licensing-metadata-packaging) — EXECUTING
+Plan: 2 of 2
+Status: Ready to execute
+Last activity: 2026-06-27 — Phase 04 execution started
 
 Progress: [░░░░░░░░░░] 0%
 
@@ -70,6 +70,7 @@ Progress: [░░░░░░░░░░] 0%
 | Phase 03 P02 | 8min | 3 tasks | 4 files |
 | Phase 03 P03 | 35min | 3 tasks | 3 files |
 | Phase 03 P04 | 12min | 2 tasks | 10 files |
+| Phase 04 P01 | 4min | 3 tasks | 3 files |
 
 ## Accumulated Context
 
@@ -100,6 +101,8 @@ Recent decisions affecting current work:
 - [Phase ?]: [Phase 03-02]: rescore is its own subcommand (run rejects rescore-only flags => exit 2); exit taxonomy 0/1/2 across all 5 handlers incl. sweep (1 if trial_failures|eval_failures|successful_trials==0; timeouts non-fatal per D-05 but zero-success=>1 per RESOLVED-A); rescore 1 if parser_misses|eval_failures; analyze 1 if skipped_unreadable|eval_failures. Narrow _load_or_clean_exit wraps ONLY loader calls (runtime ValueError keeps traceback); ToolPreflightError caught at dispatch boundary; --timeout via set_timeout_override; --traceback single <subcommand> form; cli.py --rescore scrub done (repo-wide is Plan 04).
 - [Phase ?]: Plan 04 docs: timeout exit semantics per D-05 + RESOLVED-A — an individual timeout is NON-FATAL to the exit code; only a genuine crash/eval failure or a zero-success sweep drives exit 1.
 - [Phase ?]: Plan 04 scrub rule: docs/ migration note may NAME the removed --rescore flag in prose but reproduces no full old command-form; src/ forbids ANY --rescore token (repo-wide negative grep gate).
+- [Phase 04]: Documentation/Changelog URLs use forward-valid blob/main targets; CHANGELOG.md is created by release-please in Phase 5 (04-01)
+- [Phase 04]: [iof3d]-unavailable README note carries no timeline; adapter framed as shipping-in-wheel-but-dormant until iof3D is public (04-01)
 
 ### Open Questions (surface at phase discussions)
 
@@ -131,6 +134,6 @@ yet.
 
 ## Session Continuity
 
-Last session: 2026-06-27T17:39:41.051Z
+Last session: 2026-06-27T19:18:07.496Z
 Stopped at: Phase 4 context gathered
 Resume file: .planning/phases/04-licensing-metadata-packaging/04-CONTEXT.md
