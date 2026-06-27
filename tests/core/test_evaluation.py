@@ -25,13 +25,22 @@ from pathlib import Path
 from typing import Any
 
 from geodispbench3d.dataset.schema import CaseSpec, GroundTruthSpec
-from geodispbench3d.metrics.registry import MetricDefinition, MetricsConfig
+from geodispbench3d.metrics.registry import (
+    MetricDefinition,
+    MetricRegistry,
+    MetricsConfig,
+)
 from geodispbench3d.sweep.evaluation import evaluate_trial
 from geodispbench3d.tool.base import TrialOutputs, TrialResult
 
 
-class _StubRegistry:
-    """Duck-typed ``MetricRegistry``: resolve by definition id, not dotted fn."""
+class _StubRegistry(MetricRegistry):
+    """A ``MetricRegistry`` that resolves by definition id, not dotted fn.
+
+    Subclasses the real registry so it is type-compatible with
+    ``evaluate_trial(registry=...)`` while letting tests inject in-process
+    callables without resolving any dotted-path import.
+    """
 
     def __init__(self, fns: dict[str, Callable[..., Any]]) -> None:
         self._fns = fns
