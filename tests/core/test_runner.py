@@ -524,10 +524,10 @@ def test_f08_cache_write_failure_counted_and_run_completes(
     def boom_write(*_args: Any, **_kwargs: Any) -> Any:
         raise OSError("disk full")
 
-    # The runner imports write_prediction from this module at call time, so
-    # patching the source module is what the fail-soft except (OSError, TypeError)
-    # will actually catch.
-    monkeypatch.setattr("geodispbench3d.results.predictions_cache.write_prediction", boom_write)
+    # F-10 (02-06) hoisted write_prediction to runner's module namespace, so the
+    # bound name to patch is geodispbench3d.sweep.runner.write_prediction; the
+    # fail-soft except (OSError, TypeError) then catches the raised OSError.
+    monkeypatch.setattr("geodispbench3d.sweep.runner.write_prediction", boom_write)
 
     result = runner.run_with_suite(suite=suite, max_trials=1)
 

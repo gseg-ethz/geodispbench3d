@@ -9,9 +9,10 @@ from __future__ import annotations
 
 import inspect
 import logging
+import math
 from collections.abc import Callable, Mapping, Sequence
 from collections.abc import Mapping as MappingABC
-from dataclasses import dataclass
+from dataclasses import asdict, dataclass
 from pathlib import Path
 from typing import TYPE_CHECKING, Any
 
@@ -32,6 +33,14 @@ except ImportError:  # pragma: no cover - optional dep or older Ax
         ) from ax_exc
 
 from geodispbench3d.diagnostics import PassDiagnostics
+from geodispbench3d.results.predictions_cache import write_prediction
+from geodispbench3d.sweep.trial_record import (
+    DatasetProvenance,
+    ParserProvenance,
+    ToolProvenance,
+    update_trial_record,
+    write_trial_summary,
+)
 from geodispbench3d.tool.base import ToolAdapter, TrialRequest
 
 from .evaluation import evaluate_trial
@@ -276,12 +285,6 @@ class AxSweepRunner:
         *,
         diagnostics: PassDiagnostics | None = None,
     ) -> tuple[Mapping[str, float], int, int]:
-        from geodispbench3d.sweep.trial_record import (
-            DatasetProvenance,
-            ParserProvenance,
-            ToolProvenance,
-        )
-
         # ``diagnostics`` is the sweep-wide non-fatal counter (F-08). Direct
         # callers (tests) may omit it; a throwaway then keeps the recording
         # sites uniform without changing behavior.
@@ -331,10 +334,6 @@ class AxSweepRunner:
             # --rescore / analyze invocations can find tool, dataset, and
             # parser context without consulting the original suite YAML.
             try:
-                from dataclasses import asdict
-
-                from geodispbench3d.sweep.trial_record import update_trial_record
-
                 update_trial_record(
                     result.outputs.run_dir,
                     {
@@ -360,8 +359,6 @@ class AxSweepRunner:
             predictions_root = getattr(suite.results, "predictions_root", None)
             if predictions_root is not None and evaluation.prediction is not None:
                 try:
-                    from geodispbench3d.results.predictions_cache import write_prediction
-
                     write_prediction(
                         Path(predictions_root),
                         tool_id=tool_prov.id,
@@ -386,8 +383,6 @@ class AxSweepRunner:
 
             if on_record_rows and evaluation.record_rows:
                 on_record_rows(list(evaluation.record_rows))
-
-        import math
 
         # Objective-specific finite-case signal (F-05), computed AFTER the loop
         # for self._objective_name only — each objective key may be absent/NaN
@@ -466,8 +461,6 @@ class AxSweepRunner:
         if run_dir_root is None:
             return
         try:
-            from geodispbench3d.sweep.trial_record import write_trial_summary
-
             write_trial_summary(
                 Path(run_dir_root),
                 ax_trial_index,
