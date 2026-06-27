@@ -80,6 +80,12 @@ class CliToolAdapter(ToolAdapter):
     #: Bounded wall-clock timeout for the conda-enumeration preflight probe.
     _CONDA_LIST_TIMEOUT = 30.0
 
+    #: Grace period (seconds) for the post-timeout reap. After the process tree
+    #: is SIGKILLed we drain stdout/stderr with this bound so an escaped
+    #: descendant (daemonized/re-parented out of the process group) that still
+    #: holds the inherited pipe fds cannot block the sweep indefinitely (WR-03).
+    _REAP_GRACE_SECONDS = 10.0
+
     def __init__(
         self,
         *,
@@ -254,7 +260,21 @@ class CliToolAdapter(ToolAdapter):
             # Kill the whole process group (incl. conda-run descendants) so a
             # hung tool cannot stall the sweep or orphan a GPU job, then reap.
             self._terminate_process_tree(proc)
-            stdout, stderr = proc.communicate()
+            # The SIGKILL reaps the leader and any descendant still in the
+            # process group, but a daemonized/re-parented grandchild can escape
+            # it and keep the inherited stdout/stderr fds open. Bound the drain
+            # so that escaped descendant cannot re-introduce the very hang the
+            # timeout exists to prevent (WR-03).
+            try:
+                stdout, stderr = proc.communicate(timeout=self._REAP_GRACE_SECONDS)
+            except subprocess.TimeoutExpired:
+                self._logger.warning(
+                    "timed-out trial left an escaped descendant holding "
+                    "stdout/stderr; abandoning the reap after %ss: %s",
+                    self._REAP_GRACE_SECONDS,
+                    argv[0],
+                )
+                stdout, stderr = "", ""
             duration = time.perf_counter() - start
             self._logger.warning(
                 "CLI trial timed out after %ss: %s", self._timeout, argv[0]
