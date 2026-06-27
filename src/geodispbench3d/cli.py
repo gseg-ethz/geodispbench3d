@@ -42,9 +42,7 @@ class _CleanExit(Exception):
     1 without re-printing. Never escapes the module."""
 
 
-def _load_or_clean_exit(
-    loader: Callable[..., _T], *loader_args: object, traceback: bool
-) -> _T:
+def _load_or_clean_exit(loader: Callable[..., _T], *loader_args: object, traceback: bool) -> _T:
     """Run a config loader, flattening loader errors to ``error: <msg>`` + exit 1.
 
     The protected region is EXACTLY the loader call (review MEDIUM): only a
@@ -127,8 +125,7 @@ def main(argv: list[str] | None = None) -> int:
         "--use-prediction-cache",
         action="store_true",
         help=(
-            "Load predictions from the predictions cache when available, "
-            "skipping phase 2 entirely."
+            "Load predictions from the predictions cache when available, skipping phase 2 entirely."
         ),
     )
     rescore_p.add_argument(
@@ -327,9 +324,7 @@ def _cmd_sweep(
     # every failure was a timeout (RESOLVED-A: successful_trials == 0 <=>
     # best_trial is None).
     return (
-        1
-        if (result.trial_failures or result.eval_failures or result.successful_trials == 0)
-        else 0
+        1 if (result.trial_failures or result.eval_failures or result.successful_trials == 0) else 0
     )
 
 

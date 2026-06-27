@@ -139,17 +139,13 @@ class CliToolAdapter(ToolAdapter):
 
         leader = tokens[0]
         if shutil.which(leader) is None:
-            raise self._preflight_error(
-                f"tool executable {leader!r} not found on PATH"
-            )
+            raise self._preflight_error(f"tool executable {leader!r} not found on PATH")
 
         if tokens[:2] == ["conda", "run"]:
             self._preflight_conda_env(tokens)
 
     def _preflight_error(self, message: str) -> ToolPreflightError:
-        return ToolPreflightError(
-            message, remediation=self._remediation, help_url=self._help_url
-        )
+        return ToolPreflightError(message, remediation=self._remediation, help_url=self._help_url)
 
     def _preflight_conda_env(self, tokens: Sequence[str]) -> None:
         env_name, env_prefix = _parse_conda_target(tokens)
@@ -160,9 +156,7 @@ class CliToolAdapter(ToolAdapter):
             except OSError:  # pragma: no cover - exotic FS error
                 pass
             if not prefix_path.exists():
-                raise self._preflight_error(
-                    f"conda prefix {env_prefix!r} does not exist"
-                )
+                raise self._preflight_error(f"conda prefix {env_prefix!r} does not exist")
             return
         if env_name is None:
             # `conda run` with neither -n nor -p: nothing further to resolve.
@@ -197,15 +191,12 @@ class CliToolAdapter(ToolAdapter):
             ) from exc
         if proc.returncode != 0:
             raise self._preflight_error(
-                f"`conda env list --json` failed (exit={proc.returncode}): "
-                f"{proc.stderr.strip()}"
+                f"`conda env list --json` failed (exit={proc.returncode}): {proc.stderr.strip()}"
             )
         try:
             payload = json.loads(proc.stdout)
         except json.JSONDecodeError as exc:
-            raise self._preflight_error(
-                "could not parse `conda env list --json` output"
-            ) from exc
+            raise self._preflight_error("could not parse `conda env list --json` output") from exc
         return _parse_conda_env(payload)
 
     def set_timeout_override(self, timeout: float | None) -> None:
@@ -276,9 +267,7 @@ class CliToolAdapter(ToolAdapter):
                 )
                 stdout, stderr = "", ""
             duration = time.perf_counter() - start
-            self._logger.warning(
-                "CLI trial timed out after %ss: %s", self._timeout, argv[0]
-            )
+            self._logger.warning("CLI trial timed out after %ss: %s", self._timeout, argv[0])
             return TrialResult(
                 outputs=TrialOutputs(run_dir=run_dir or self._run_dir_root or Path.cwd()),
                 scalar_metrics={"runtime_seconds": duration},

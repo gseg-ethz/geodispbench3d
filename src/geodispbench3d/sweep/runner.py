@@ -72,9 +72,7 @@ def _raise_if_failed(result: TrialResult) -> None:
     """
 
     if not result.success:
-        raise TrialExecutionError(
-            result.error or "trial failed", error_kind=result.error_kind
-        )
+        raise TrialExecutionError(result.error or "trial failed", error_kind=result.error_kind)
 
 
 @dataclass(frozen=True)
@@ -280,9 +278,7 @@ class AxSweepRunner:
         try:
             return self._ax.get_best_trial()
         except Exception:  # pragma: no cover - Ax has no completed/best trial
-            self._logger.info(
-                "No best trial available (no successful trials in this sweep)"
-            )
+            self._logger.info("No best trial available (no successful trials in this sweep)")
             return None
 
     def run_with_suite(
