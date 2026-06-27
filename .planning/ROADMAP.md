@@ -141,7 +141,7 @@ Decimal phases appear between their surrounding integers in numeric order.
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
 | 1. Code-Health Audit | 2/2 | Complete    | 2026-06-26 |
-| 2. Targeted Fixes | 7/7 | Complete   | 2026-06-27 |
+| 2. Targeted Fixes | 7/7 | Complete    | 2026-06-27 |
 | 3. CLI Hardening | 0/? | Not started | - |
 | 4. Licensing, Metadata & Packaging | 0/? | Not started | - |
 | 5. CI/CD & Release | 0/? | Not started | - |
