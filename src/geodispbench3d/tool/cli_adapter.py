@@ -101,7 +101,11 @@ class CliToolAdapter(ToolAdapter):
         self._hashed_run_dir = hashed_run_dir
         self._predictions_glob = predictions_glob
         self._figures_glob = figures_glob
-        self._env = dict(env) if env else None
+        # Merge overrides over the inherited environment rather than replacing
+        # it (WR-02): ``Popen(env=...)`` replaces the child env wholesale, so a
+        # partial dict like ``{"OMP_NUM_THREADS": "4"}`` would otherwise strip
+        # PATH/HOME/CONDA_*/LD_LIBRARY_PATH and break ``conda run`` resolution.
+        self._env = {**os.environ, **env} if env else None
         # ``None`` or any value ``<= 0`` means "no timeout" (opt-in, D-04).
         self._timeout = timeout
         self._remediation = remediation

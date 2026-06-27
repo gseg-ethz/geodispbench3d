@@ -170,7 +170,10 @@ def _build_cli_adapter(raw: Mapping[str, Any], yaml_path: Path) -> CliToolAdapte
         hashed_run_dir=hashed_spec,
         predictions_glob=outputs_raw.get("predictions_glob"),
         figures_glob=outputs_raw.get("figures_glob"),
-        env=outputs_raw.get("env"),
+        # ``env`` is an execution concern, not an output-collection one: read it
+        # from the tool-level ``execution`` block (WR-02). The adapter merges
+        # these over ``os.environ`` rather than replacing the whole environment.
+        env=execution_raw.get("env"),
         timeout=timeout,
         remediation=remediation,
         help_url=help_url,

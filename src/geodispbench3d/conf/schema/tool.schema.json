@@ -24,6 +24,11 @@
         "timeout_seconds": {
           "type": "number",
           "description": "Optional per-trial wall-clock timeout (seconds). Unset or <= 0 disables the timeout. On expiry the tool process tree is killed and the trial is recorded as a timeout failure."
+        },
+        "env": {
+          "type": "object",
+          "additionalProperties": {"type": "string"},
+          "description": "Optional environment-variable overrides for the tool subprocess. Merged over the inherited process environment (os.environ); does not replace it, so PATH/CONDA_*/LD_LIBRARY_PATH etc. are preserved."
         }
       }
     },
