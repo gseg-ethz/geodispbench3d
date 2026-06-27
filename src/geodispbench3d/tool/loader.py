@@ -41,7 +41,6 @@ class ToolConfig:
     kind: str
     adapter: ToolAdapter
     hyperparameters: Sequence[SweepParameter] = ()
-    outputs_options: Mapping[str, Any] = field(default_factory=dict)
     output_parser: Callable[..., Any] | None = None
     output_parser_options: Mapping[str, Any] = field(default_factory=dict)
     raw: Mapping[str, Any] = field(default_factory=dict)
@@ -77,7 +76,6 @@ def load_tool_config(path: str | Path) -> ToolConfig:
         kind=kind,
         adapter=adapter,
         hyperparameters=tuple(hparams),
-        outputs_options=dict(raw.get("outputs") or {}),
         output_parser=parser_fn,
         output_parser_options=parser_options,
         raw=raw,

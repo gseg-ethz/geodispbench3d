@@ -37,14 +37,12 @@ class ToolProvenance:
 
     id: str
     yaml_path: str | None = None
-    yaml_hash: str | None = None  # sha256 of the resolved tool YAML
 
     @classmethod
     def from_yaml_path(cls, tool_id: str, yaml_path: Path | None) -> ToolProvenance:
         return cls(
             id=tool_id,
             yaml_path=str(yaml_path) if yaml_path is not None else None,
-            yaml_hash=hash_file(yaml_path) if yaml_path is not None else None,
         )
 
 
@@ -304,7 +302,6 @@ def _tool_from_record(record: Mapping[str, Any]) -> ToolProvenance | None:
     return ToolProvenance(
         id=str(block.get("id", "")),
         yaml_path=block.get("yaml_path"),
-        yaml_hash=block.get("yaml_hash"),
     )
 
 

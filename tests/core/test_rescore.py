@@ -19,6 +19,7 @@ from geodispbench3d.sweep.trial_record import (
     DatasetProvenance,
     ToolProvenance,
     load_trial_record,
+    read_provenance,
     trial_record_path,
     write_trial_record,
 )
@@ -235,6 +236,45 @@ def test_cli_rescore_emits_non_fatal_failures_line(
     assert any(
         "non-fatal failures" in r.getMessage() and "1" in r.getMessage() for r in caplog.records
     )
+
+
+def test_old_record_with_yaml_hash_still_deserializes(tmp_path: Path) -> None:
+    """An on-disk summary whose ``tool`` block still carries the removed
+    ``yaml_hash`` key deserializes without error (F-30).
+
+    The four dead fields were deleted, but loaders reconstruct provenance via
+    ``.get()``-based extraction, so the now-unknown ``yaml_hash`` key is simply
+    ignored — existing run dirs written before the deletion still load.
+    """
+
+    run_dir = tmp_path / "runs" / "legacyhash"
+    run_dir.mkdir(parents=True)
+    write_trial_record(
+        trial_record_path(run_dir),
+        {
+            "status": "success",
+            "parameters": {"alpha": 0.5},
+            "metrics": {"median_displacement_error": 0.1},
+            "tool": {
+                "id": "legacy-tool",
+                "yaml_path": "/old/tool.yaml",
+                # Removed field still present in the on-disk record:
+                "yaml_hash": "sha256:deadbeef",
+            },
+            "dataset": {"id": "legacy-dataset", "case": "only-case"},
+            "parser": {"fn": "stub_pkg:parse", "options": {}},
+        },
+    )
+
+    tool_prov, dataset_prov, parser_prov = read_provenance(run_dir)
+
+    # No TypeError despite the extra (deleted) key; the live fields survive.
+    assert isinstance(tool_prov, ToolProvenance)
+    assert tool_prov.id == "legacy-tool"
+    assert tool_prov.yaml_path == "/old/tool.yaml"
+    assert not hasattr(tool_prov, "yaml_hash")
+    assert dataset_prov is not None and dataset_prov.id == "legacy-dataset"
+    assert parser_prov is not None and parser_prov.fn == "stub_pkg:parse"
 
 
 def test_rescore_skips_failed_runs(tmp_path: Path) -> None:
