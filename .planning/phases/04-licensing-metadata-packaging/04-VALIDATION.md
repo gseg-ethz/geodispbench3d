@@ -1,10 +1,11 @@
 ---
 phase: 4
 slug: licensing-metadata-packaging
-status: ready
+status: validated
 nyquist_compliant: true
-wave_0_complete: false
+wave_0_complete: true
 created: 2026-06-27
+updated: 2026-06-27
 ---
 
 # Phase 4 — Validation Strategy
@@ -40,12 +41,12 @@ All python/pip/pytest invocations MUST route through `conda run -n iof3d_cosicor
 
 | Task ID | Plan | Wave | Requirement | Threat Ref | Secure Behavior | Test Type | Automated Command | File Exists | Status |
 |---------|------|------|-------------|------------|-----------------|-----------|-------------------|-------------|--------|
-| 04-01-01 | 01 | 1 | LIC-01/02/03/04 | T-04-01-I | No private-repo paths/tokens in shippable metadata; URLs are public https | unit (metadata assert, RED-first) | `conda run -n iof3d_cosicorr3d-dev312 pytest tests/core/test_packaging_metadata.py -x` | ❌ W0 (this task creates it) | ⬜ pending |
-| 04-01-02 | 01 | 1 | LIC-02/03 | T-04-02-T | Publish-guard classifier removed deliberately; honest Beta maturity signal | unit | `conda run -n iof3d_cosicorr3d-dev312 python -c "import tomllib,pathlib;..."` (see plan) | ✅ (Task 1) | ⬜ pending |
-| 04-01-03 | 01 | 1 | LIC-01/04 | T-04-01-I | README long-description states BSD-3-Clause; no Proprietary | unit | `conda run -n iof3d_cosicorr3d-dev312 pytest tests/core/test_packaging_metadata.py -x` | ✅ (Task 1) | ⬜ pending |
-| 04-02-01 | 02 | 2 | PKG-01/02 | T-04-04-T | Public import succeeds with iof3D/pc2img blocked; no eager private-dep path | unit (simulated absence, RED-first) | `conda run -n iof3d_cosicorr3d-dev312 pytest tests/core/test_iof3d_import_guard.py -x` | ❌ W0 (this task creates it) | ⬜ pending |
-| 04-02-02 | 02 | 2 | PKG-01 | T-04-03-R / T-04-04-T | Adapter use raises actionable ImportError chaining original; iof3d-ax exits 1 cleanly | unit | `conda run -n iof3d_cosicorr3d-dev312 pytest tests/core/test_iof3d_import_guard.py::test_public_import_succeeds_use_fails tests/core/test_iof3d_import_guard.py::test_iof3d_ax_launcher_exits_cleanly -x` | ✅ (Task 1) | ⬜ pending |
-| 04-02-03 | 02 | 2 | PKG-01/02/03 | T-04-02-D / T-04-SC | iof3d extra disabled (unresolvable private dep removed); f2s3 pins first-party pchandler ~= 2.1 | unit + in-phase resolution smoke | `conda run -n iof3d_cosicorr3d-dev312 pytest tests/core/test_iof3d_import_guard.py -x` (unit) + throwaway-venv `pip install '.[f2s3]'` + F2S3 parser-import smoke, built via the conda interpreter (in-phase, Task 3 verify); only the full behavioral `pytest tests/f2s3` against installed 2.1.0 DEFERRED to Phase 5 CI f2s3 job | ✅ (Task 1) | ⬜ pending |
+| 04-01-01 | 01 | 1 | LIC-01/02/03/04 | T-04-01-I | No private-repo paths/tokens in shippable metadata; URLs are public https | unit (metadata assert, RED-first) | `conda run -n iof3d_cosicorr3d-dev312 pytest tests/core/test_packaging_metadata.py -x` | ✅ (created W0) | ✅ green |
+| 04-01-02 | 01 | 1 | LIC-02/03 | T-04-02-T | Publish-guard classifier removed deliberately; honest Beta maturity signal | unit | `conda run -n iof3d_cosicorr3d-dev312 python -c "import tomllib,pathlib;..."` (see plan) | ✅ (Task 1) | ✅ green |
+| 04-01-03 | 01 | 1 | LIC-01/04 | T-04-01-I | README long-description states BSD-3-Clause; no Proprietary | unit | `conda run -n iof3d_cosicorr3d-dev312 pytest tests/core/test_packaging_metadata.py -x` | ✅ (Task 1) | ✅ green |
+| 04-02-01 | 02 | 2 | PKG-01/02 | T-04-04-T | Public import succeeds with iof3D/pc2img blocked; no eager private-dep path | unit (simulated absence, RED-first) | `conda run -n iof3d_cosicorr3d-dev312 pytest tests/core/test_iof3d_import_guard.py -x` | ✅ (created W0) | ✅ green |
+| 04-02-02 | 02 | 2 | PKG-01 | T-04-03-R / T-04-04-T | Adapter use raises actionable ImportError chaining original; iof3d-ax exits 1 cleanly | unit | `conda run -n iof3d_cosicorr3d-dev312 pytest tests/core/test_iof3d_import_guard.py::test_public_import_succeeds_use_fails tests/core/test_iof3d_import_guard.py::test_iof3d_ax_launcher_exits_cleanly -x` | ✅ (Task 1) | ✅ green |
+| 04-02-03 | 02 | 2 | PKG-01/02/03 | T-04-02-D / T-04-SC | iof3d extra disabled (unresolvable private dep removed); f2s3 pins first-party pchandler ~= 2.1 | unit + in-phase resolution smoke | `conda run -n iof3d_cosicorr3d-dev312 pytest tests/core/test_iof3d_import_guard.py -x` (unit) + throwaway-venv `pip install '.[f2s3]'` + F2S3 parser-import smoke, built via the conda interpreter (in-phase, Task 3 verify); only the full behavioral `pytest tests/f2s3` against installed 2.1.0 DEFERRED to Phase 5 CI f2s3 job | ✅ (Task 1) | ✅ green |
 
 *Status: ⬜ pending · ✅ green · ❌ red · ⚠️ flaky*
 
@@ -55,9 +56,9 @@ All python/pip/pytest invocations MUST route through `conda run -n iof3d_cosicor
 
 Wave 0 = the RED-first test tasks embedded as Task 1 of each plan (task-level TDD; no separate wave needed for this coarse phase):
 
-- [ ] `tests/core/test_packaging_metadata.py` (Plan 01, Task 1) — parses `pyproject.toml` via `tomllib` + reads `README.md`/`CITATION.cff`/`LICENSE`; asserts no `Private ::` classifier, no "Proprietary" in README License section, Beta/audience/topic classifiers present, Documentation/Changelog URLs present, `[iof3d]`-unavailable note present (no timeline). Covers LIC-01/02/03/04.
-- [ ] `tests/core/test_iof3d_import_guard.py` (Plan 02, Task 1) — simulated-absence guard test (public import succeeds, adapter use raises actionable ImportError) + `iof3d-ax` clean-SystemExit test + pyproject extras assertion (`iof3d` commented, `f2s3 == ["pchandler ~= 2.1"]`). Covers PKG-01/02.
-- [ ] No new framework install needed — pytest/coverage already in the `dev` extra.
+- [x] `tests/core/test_packaging_metadata.py` (Plan 01, Task 1) — parses `pyproject.toml` via `tomllib` + reads `README.md`/`CITATION.cff`/`LICENSE`; asserts no `Private ::` classifier, no "Proprietary" in README License section, Beta/audience/topic classifiers present, Documentation/Changelog URLs present, `[iof3d]`-unavailable note present (no timeline). Covers LIC-01/02/03/04. **7 tests green.**
+- [x] `tests/core/test_iof3d_import_guard.py` (Plan 02, Task 1) — simulated-absence guard test (public import succeeds, adapter use raises actionable ImportError) + `iof3d-ax` clean-SystemExit test + pyproject extras assertion (`iof3d` commented, `f2s3 == ["pchandler ~= 2.1"]`). Covers PKG-01/02. **5 tests green.**
+- [x] No new framework install needed — pytest/coverage already in the `dev` extra.
 
 ---
 
@@ -79,3 +80,24 @@ Wave 0 = the RED-first test tasks embedded as Task 1 of each plan (task-level TD
 - [x] `nyquist_compliant: true` set in frontmatter
 
 **Approval:** approved 2026-06-27
+
+---
+
+## Validation Audit 2026-06-27
+
+Retroactive post-execution audit (State A). Every requirement was cross-referenced to its
+implemented test and the suite was run via the correct env interpreter
+(`conda run -n iof3d_cosicorr3d-dev312 python -m pytest`).
+
+| Metric | Count |
+|--------|-------|
+| Gaps found | 0 |
+| Resolved | 0 |
+| Escalated | 0 |
+
+- All 12 Wave-0 tests green (7 in `test_packaging_metadata.py`, 5 in `test_iof3d_import_guard.py`).
+- Coverage: LIC-01/02/03/04 (metadata gate) and PKG-01/02/03 (import-guard + extras gate) all COVERED automated.
+- One pre-documented Manual-Only item unchanged: full behavioral `pytest tests/f2s3` against the installed `pchandler 2.1.0` remains deferred to the Phase 5 CI `f2s3` job (the dev env holds editable `2.0.0rc8`, which does not satisfy `~= 2.1`). Symbol/API compat already verified against the 2.1.0 wheel; clean-venv resolution + parser-import proven in-phase.
+- Note: the Test Infrastructure / Sampling commands above use bare `pytest`; the correct invocation is `python -m pytest` under `conda run` (bare `pytest` resolves to a wrong base-python interpreter). Flagged for the Phase 5 AGENTS.md doc fix; non-blocking.
+
+**Audit verdict:** NYQUIST-COMPLIANT — no gaps to fill.
