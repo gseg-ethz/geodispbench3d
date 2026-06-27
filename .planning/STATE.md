@@ -6,14 +6,14 @@ current_phase: 02
 current_phase_name: targeted-fixes
 status: executing
 stopped_at: Phase 2 context gathered
-last_updated: "2026-06-27T08:05:55.302Z"
+last_updated: "2026-06-27T08:32:52.261Z"
 last_activity: 2026-06-27
 last_activity_desc: Phase 02 execution started
 progress:
   total_phases: 5
   completed_phases: 1
   total_plans: 9
-  completed_plans: 3
+  completed_plans: 4
   percent: 20
 ---
 
@@ -29,7 +29,7 @@ See: .planning/PROJECT.md (updated 2026-06-26)
 ## Current Position
 
 Phase: 02 (targeted-fixes) — EXECUTING
-Plan: 2 of 7
+Plan: 3 of 7
 Status: Ready to execute
 Last activity: 2026-06-27 — Phase 02 execution started
 
@@ -58,6 +58,7 @@ Progress: [░░░░░░░░░░] 0%
 | Phase 01 P01 | 10min | 3 tasks | 9 files |
 | Phase 01 P02 | 20min | 2 tasks | 1 files |
 | Phase 02 P01 | 7min | 2 tasks | 1 files |
+| Phase 02 P02 | 55min | 3 tasks | 5 files |
 
 ## Accumulated Context
 
@@ -74,6 +75,8 @@ Recent decisions affecting current work:
 - [Phase ?]: 2 Blockers gate public publish (F-26 Private classifier, F-27 README/LICENSE mismatch), routed to Phase 4
 - [Phase ?]: [Phase 02-01]: runner.py coverage measured via 'coverage run -m pytest -p no:cov' (72%, up from 13%); plan's 'pytest --cov' crashes on a torch/pytest-cov early-import conflict in this env
 - [Phase ?]: [Phase 02-01]: F-20 characterization harness (FakeAxClient + StubAdapter) landed; partial-failure NaN survivor-mean pinned as the F-05/F-08 regression anchor
+- [Phase ?]: 02-02: pyright gate baseline is the dev-env capture (1.1.403 + full extras, 21 errors); CI-faithful 1.1.392/.[dev] (16 errors) is a doc-only strict-subset reference
+- [Phase ?]: 02-02: pyright_gate.py uses line-number-independent (file, rule, normalized-message) multiset signatures, replacing raw 'pyright &&' for 02-03/04/05/07
 
 ### Open Questions (surface at phase discussions)
 
@@ -105,6 +108,6 @@ yet.
 
 ## Session Continuity
 
-Last session: 2026-06-27T08:04:52.110Z
+Last session: 2026-06-27T08:32:11.278Z
 Stopped at: Phase 2 context gathered
 Resume file: .planning/phases/02-targeted-fixes/02-CONTEXT.md
