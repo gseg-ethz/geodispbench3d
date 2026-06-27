@@ -190,24 +190,7 @@ def _build_factory_adapter(raw: Mapping[str, Any], yaml_path: Path) -> ToolAdapt
 
 
 def _load_hyperparameters(raw: Sequence[Mapping[str, Any]]) -> list[SweepParameter]:
-    params: list[SweepParameter] = []
-    for entry in raw:
-        params.append(
-            SweepParameter(
-                name=str(entry["name"]),
-                kind=str(entry.get("type", "choice")),
-                value_type=str(entry.get("value_type", "str")),
-                values=list(entry.get("values")) if entry.get("values") is not None else None,
-                lower=entry.get("lower"),
-                upper=entry.get("upper"),
-                log_scale=bool(entry.get("log_scale", False)),
-                step=entry.get("step"),
-                activates_on=entry.get("activates_on"),
-                is_ordered=entry.get("is_ordered"),
-                sort_values=entry.get("sort_values"),
-            )
-        )
-    return params
+    return [SweepParameter.from_mapping(entry) for entry in raw]
 
 
 def _resolve_callable(entry: str) -> Any:
