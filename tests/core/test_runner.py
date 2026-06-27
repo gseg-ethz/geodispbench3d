@@ -28,6 +28,7 @@ timestamp suffix is asserted anywhere — F-09 will switch isoformat output to
 
 from __future__ import annotations
 
+import json
 import sys
 import textwrap
 from collections.abc import Mapping
@@ -37,6 +38,7 @@ from typing import Any
 
 import pytest
 
+from geodispbench3d.metrics.registry import MetricRegistry
 from geodispbench3d.suite.loader import load_suite
 from geodispbench3d.sweep import runner as runner_mod
 from geodispbench3d.sweep.parameters import SweepConfig, SweepParameter, build_parameter_specs
@@ -317,3 +319,105 @@ def test_normalize_trial_data_unparseable_raises_type_error() -> None:
 
     with pytest.raises(TypeError):
         _normalize_trial_data(object())
+
+
+# ---------------------------------------------------------------------------
+# Task 2: cross-case aggregation, partial-failure NaN path, provenance stamping
+# ---------------------------------------------------------------------------
+
+# Predictions chosen so the objective (median_displacement_error vs GT |v|=1)
+# is the exact error of the single labeled point P:
+#   vector (1.4,0,0) -> error 0.4 ; (1.6,0,0) -> error 0.6 ; [] -> NaN.
+_PRED_ERR_04 = [{"label": "P", "vector": [1.4, 0.0, 0.0]}]
+_PRED_ERR_06 = [{"label": "P", "vector": [1.6, 0.0, 0.0]}]
+_PRED_NAN: list[dict[str, Any]] = []  # no labeled points -> metric returns NaN
+
+
+def test_single_case_aggregation_short_circuits(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """One case -> _evaluate_across_cases returns that case's scalar dict unchanged."""
+
+    suite = _bootstrap_suite(tmp_path, ["solo"])
+    adapter = StubAdapter(run_root=tmp_path / "out", predictions={"solo": _PRED_ERR_04})
+    runner, _fake = _make_runner(monkeypatch, adapter)
+
+    aggregated = runner._evaluate_across_cases(
+        {"alpha": 0.5}, list(suite.dataset.cases), suite, MetricRegistry(), 0, None
+    )
+
+    assert set(aggregated) == {"median_displacement_error"}
+    assert aggregated["median_displacement_error"] == pytest.approx(0.4)
+
+
+def test_multi_case_aggregation_means_finite_values(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Multi-case all-finite -> per-key mean across cases (0.4, 0.6 -> 0.5)."""
+
+    suite = _bootstrap_suite(tmp_path, ["c1", "c2"])
+    adapter = StubAdapter(
+        run_root=tmp_path / "out",
+        predictions={"c1": _PRED_ERR_04, "c2": _PRED_ERR_06},
+    )
+    runner, _fake = _make_runner(monkeypatch, adapter)
+
+    aggregated = runner._evaluate_across_cases(
+        {"alpha": 0.5}, list(suite.dataset.cases), suite, MetricRegistry(), 0, None
+    )
+
+    assert aggregated["median_displacement_error"] == pytest.approx(0.5)
+
+
+def test_multi_case_partial_failure_ignores_nan_survivor_mean(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Partial failure: one NaN case is dropped; mean is taken over finite survivors.
+
+    REGRESSION ANCHOR: this pins the CURRENT NaN-ignoring-mean behavior. F-05
+    (plan 02-03) and F-08 (plan 02-05) will EXTEND this path to surface the
+    finite-case count / partial-failure signal — when they land, this test is
+    the contract they must consciously update. Assert ONLY today's behavior.
+    """
+
+    suite = _bootstrap_suite(tmp_path, ["good", "bad"])
+    adapter = StubAdapter(
+        run_root=tmp_path / "out",
+        predictions={"good": _PRED_ERR_04, "bad": _PRED_NAN},
+    )
+    runner, _fake = _make_runner(monkeypatch, adapter)
+
+    aggregated = runner._evaluate_across_cases(
+        {"alpha": 0.5}, list(suite.dataset.cases), suite, MetricRegistry(), 0, None
+    )
+
+    # The NaN survivor is silently dropped; the mean is the good case alone.
+    # (Today there is NO signal that a case failed — that is the F-05/F-08 gap.)
+    import math
+
+    value = aggregated["median_displacement_error"]
+    assert not math.isnan(value)
+    assert value == pytest.approx(0.4)
+
+
+def test_provenance_blocks_stamped_into_summary_json(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """A healthy run stamps tool/dataset/parser provenance into summary.json."""
+
+    suite = _bootstrap_suite(tmp_path, ["solo"])
+    adapter = StubAdapter(run_root=tmp_path / "out", predictions={"solo": _PRED_ERR_04})
+    runner, _fake = _make_runner(monkeypatch, adapter)
+
+    runner._evaluate_across_cases(
+        {"alpha": 0.5}, list(suite.dataset.cases), suite, MetricRegistry(), 0, None
+    )
+
+    summary_path = adapter.run_dirs["solo"] / "ax_trial" / "summary.json"
+    assert summary_path.is_file()
+    record = json.loads(summary_path.read_text(encoding="utf-8"))
+
+    assert record["tool"]["id"] == "stub-tool"
+    assert record["dataset"]["id"] == "stub-dataset"
+    assert record["dataset"]["case"] == "solo"
+    assert "parse" in record["parser"]["fn"]
