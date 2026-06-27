@@ -24,12 +24,13 @@ from __future__ import annotations
 import importlib
 import logging
 from collections.abc import Callable, Iterable, Mapping, Sequence
-from dataclasses import asdict, dataclass
-from datetime import datetime
+from dataclasses import dataclass
+from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
 
 from geodispbench3d.dataset.schema import CaseSpec, DatasetSpec
+from geodispbench3d.diagnostics import PassDiagnostics
 from geodispbench3d.metrics.registry import MetricRegistry
 from geodispbench3d.results.predictions_cache import (
     cache_path as predictions_cache_path,
@@ -45,6 +46,7 @@ from geodispbench3d.sweep.trial_record import (
     ToolProvenance,
     append_rescore_entry,
     load_trial_record,
+    parser_fn_repr,
     read_provenance,
     trial_record_path,
 )
@@ -65,7 +67,13 @@ class RescoreOptions:
 
 @dataclass
 class RescoreSummary:
-    """Aggregate counters returned to the CLI for a one-line report."""
+    """Aggregate counters returned to the CLI for a one-line report.
+
+    ``non_fatal_failures`` totals the swallowed fail-soft failures across the
+    pass (corrupt trial-record / cache reads, per-run evaluation skips, cache
+    writes, and rescore-log appends), surfaced as the CLI's aggregate
+    "N non-fatal failures" line (F-08).
+    """
 
     total: int = 0
     succeeded: int = 0
@@ -74,6 +82,7 @@ class RescoreSummary:
     parser_misses: int = 0
     cache_hits: int = 0
     rows_emitted: int = 0
+    non_fatal_failures: int = 0
 
 
 def rescore_suite(
@@ -99,12 +108,21 @@ def rescore_suite(
     case_index: Mapping[str, CaseSpec] = {c.name: c for c in suite.dataset.cases}
     registry = MetricRegistry()
 
+    # One PassDiagnostics for the whole pass: suite-level corrupt reads record
+    # here directly; each run's internal fail-soft failures (evaluation,
+    # cache write, rescore-log append) ride on its _RescoreOutcome and are
+    # folded in below (F-08).
+    diag = PassDiagnostics()
+
     targets = list(run_dirs) if run_dirs is not None else _walk_run_dirs(suite, log)
     log.info("rescore: %d run dir(s) to evaluate (pass_id=%s)", len(targets), pass_id)
 
     for run_dir in targets:
         summary.total += 1
-        record = load_trial_record(trial_record_path(run_dir))
+        record = load_trial_record(
+            trial_record_path(run_dir),
+            on_non_fatal=lambda _exc: diag.add("trial_record_read"),
+        )
         if not record:
             log.warning("rescore: no summary.json under %s, skipping", run_dir)
             summary.skipped_no_summary += 1
@@ -136,9 +154,11 @@ def rescore_suite(
             registry=registry,
             pass_id=pass_id,
             log=log,
+            on_cache_read_failure=lambda _exc: diag.add("prediction_cache_read"),
         )
         summary.cache_hits += int(outcome.cache_hit)
         summary.parser_misses += int(outcome.parser_failed)
+        diag.add("rescore_one", outcome.non_fatal_failures)
         if outcome.rows:
             summary.rows_emitted += len(outcome.rows)
             if on_record_rows:
@@ -146,13 +166,16 @@ def rescore_suite(
         if outcome.scored:
             summary.succeeded += 1
 
+    summary.non_fatal_failures = diag.non_fatal_failures
     log.info(
-        "rescore done: succeeded=%d total=%d cache_hits=%d parser_failed=%d rows=%d",
+        "rescore done: succeeded=%d total=%d cache_hits=%d parser_failed=%d rows=%d "
+        "non_fatal_failures=%d",
         summary.succeeded,
         summary.total,
         summary.cache_hits,
         summary.parser_misses,
         summary.rows_emitted,
+        summary.non_fatal_failures,
     )
     return summary
 
@@ -168,6 +191,7 @@ class _RescoreOutcome:
     cache_hit: bool = False
     parser_failed: bool = False
     rows: list[Mapping[str, Any]] | None = None
+    non_fatal_failures: int = 0
 
 
 def _walk_run_dirs(suite: Any, log: logging.Logger) -> list[Path]:
@@ -210,6 +234,7 @@ def _rescore_one(
     registry: MetricRegistry,
     pass_id: str,
     log: logging.Logger,
+    on_cache_read_failure: Callable[[Exception], None] | None = None,
 ) -> _RescoreOutcome:
     outcome = _RescoreOutcome(rows=[])
 
@@ -223,7 +248,14 @@ def _rescore_one(
 
     prediction: Any = None
     if options.use_prediction_cache:
-        prediction = _try_cache_lookup(suite, recorded_tool, recorded_dataset, case, run_dir)
+        prediction = _try_cache_lookup(
+            suite,
+            recorded_tool,
+            recorded_dataset,
+            case,
+            run_dir,
+            on_non_fatal=on_cache_read_failure,
+        )
         if prediction is not None:
             outcome.cache_hit = True
             log.debug("rescore: cache hit for %s", run_dir)
@@ -254,10 +286,18 @@ def _rescore_one(
             record_extras=record_extras,
             logger=log,
         )
-    except Exception:  # pragma: no cover - defensive
+    except Exception:
+        # Plugin/user callable boundary: evaluate_trial runs arbitrary
+        # parser/metric code, so a closed exception set is inapplicable. Stay
+        # broad (belt-and-suspenders — inner parser/metric failures are already
+        # caught) so a plugin bug skips this run instead of aborting the pass
+        # (fail-soft, F-08).
         log.exception("rescore: evaluate_trial failed for %s", run_dir)
         outcome.parser_failed = True
+        outcome.non_fatal_failures += 1
         return outcome
+
+    outcome.non_fatal_failures += evaluation.non_fatal_failures
 
     if evaluation.prediction is None and parser_fn is not None and prediction is None:
         # Parser was supposed to run and produced nothing usable.
@@ -286,14 +326,15 @@ def _rescore_one(
                     "tool": tool_prov,
                     "dataset": dataset_prov,
                     "parser": ParserProvenance(
-                        fn=_parser_fn_repr(parser_fn), options=dict(parser_options or {})
+                        fn=parser_fn_repr(parser_fn), options=dict(parser_options or {})
                     ),
                     "run_dir": str(run_dir),
                     "cached_by": "rescore",
                 },
             )
-        except Exception:  # pragma: no cover - cache write failures shouldn't fail rescoring
-            log.debug("rescore: cache write failed for %s", run_dir, exc_info=True)
+        except (OSError, TypeError):  # cache write failures shouldn't fail rescoring
+            log.warning("rescore: cache write failed for %s", run_dir, exc_info=True)
+            outcome.non_fatal_failures += 1
 
     # Audit log appended to the trial summary.
     try:
@@ -301,14 +342,21 @@ def _rescore_one(
             run_dir,
             {
                 "pass_id": pass_id,
-                "rescored_at": datetime.utcnow().isoformat(timespec="seconds") + "Z",
+                "rescored_at": datetime.now(UTC).isoformat(timespec="seconds"),
                 "parser_source": parser_source,
                 "parser_options": dict(parser_options or {}),
                 "metrics": dict(evaluation.scalar_metrics),
             },
         )
-    except Exception:  # pragma: no cover - non-fatal
-        log.debug("rescore: append_rescore_entry failed for %s", run_dir, exc_info=True)
+    except (OSError, AttributeError, TypeError):
+        # append_rescore_entry: trial_record mkdir + load_trial_record (which
+        # swallows JSONDecodeError, returning {}) + payload['rescore_log'].append
+        # + write_trial_record (json.dump + Path.replace). A malformed-but-valid
+        # summary whose rescore_log is a non-list truthy yields AttributeError on
+        # .append; OSError/TypeError cover the I/O + serialization paths. Stays
+        # fail-soft (the rescore itself already succeeded).
+        log.warning("rescore: append_rescore_entry failed for %s", run_dir, exc_info=True)
+        outcome.non_fatal_failures += 1
 
     outcome.scored = True
     outcome.rows = list(evaluation.record_rows)
@@ -348,6 +396,8 @@ def _try_cache_lookup(
     recorded_dataset: DatasetProvenance | None,
     case: CaseSpec,
     run_dir: Path,
+    *,
+    on_non_fatal: Callable[[Exception], None] | None = None,
 ) -> Any:
     root = getattr(suite.results, "predictions_root", None)
     if root is None:
@@ -361,7 +411,7 @@ def _try_cache_lookup(
         case=case.name,
         run_hash=run_dir.name,
     )
-    payload = read_prediction(path)
+    payload = read_prediction(path, on_non_fatal=on_non_fatal)
     if payload is None:
         return None
     return payload.get("prediction")
@@ -392,22 +442,8 @@ def _resolve_dotted(entry: str) -> Callable[..., Any]:
     return fn
 
 
-def _parser_fn_repr(fn: Callable[..., Any] | None) -> str | None:
-    if fn is None:
-        return None
-    module = getattr(fn, "__module__", None)
-    qualname = getattr(fn, "__qualname__", getattr(fn, "__name__", None))
-    if module and qualname:
-        return f"{module}:{qualname}"
-    return None
-
-
 def _utcnow_compact() -> str:
-    return datetime.utcnow().strftime("rescore-%Y%m%dT%H%M%S")
-
-
-# Suppress an unused-import warning for asdict; kept for future expansion.
-_ = asdict
+    return datetime.now(UTC).strftime("rescore-%Y%m%dT%H%M%S")
 
 
 __all__ = [

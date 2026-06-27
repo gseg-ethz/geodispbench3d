@@ -32,9 +32,9 @@ so Path / numpy values survive.
 from __future__ import annotations
 
 import json
-from collections.abc import Mapping
+from collections.abc import Callable, Mapping
 from dataclasses import asdict, is_dataclass
-from datetime import datetime
+from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
 
@@ -94,7 +94,7 @@ def write_prediction(
         "provenance": _to_jsonable(
             {
                 **(dict(provenance) if provenance else {}),
-                "cached_at": datetime.utcnow().isoformat(timespec="seconds") + "Z",
+                "cached_at": datetime.now(UTC).isoformat(timespec="seconds"),
             }
         ),
     }
@@ -108,8 +108,20 @@ def write_prediction(
     return out
 
 
-def read_prediction(path: Path) -> dict[str, Any] | None:
-    """Read a cache file. Returns ``None`` when the file is absent."""
+def read_prediction(
+    path: Path,
+    *,
+    on_non_fatal: Callable[[Exception], None] | None = None,
+) -> dict[str, Any] | None:
+    """Read a cache file. Returns ``None`` when the file is absent or unreadable.
+
+    An absent file is normal (a cache miss) and never counts as a failure. A
+    present-but-unreadable file (bad permissions, corrupt JSON) is a fail-soft
+    failure: it still degrades to a ``None`` miss, but when ``on_non_fatal`` is
+    supplied it is invoked with the caught exception so the caller's pass-level
+    diagnostics can count it (F-08). Internal callers that treat a miss as
+    normal leave ``on_non_fatal`` at its default ``None``.
+    """
 
     p = Path(path)
     if not p.is_file():
@@ -117,7 +129,13 @@ def read_prediction(path: Path) -> dict[str, Any] | None:
     try:
         with p.open("r", encoding="utf-8") as fh:
             return json.load(fh)
-    except Exception:
+    except (OSError, json.JSONDecodeError, UnicodeDecodeError) as exc:
+        # UnicodeDecodeError is a sibling of json.JSONDecodeError under
+        # ValueError: a present-but-non-UTF-8 cache file raises it during the
+        # decode in fh.read(), before any JSON parsing. Catching it keeps the
+        # fail-soft contract (F-08) instead of aborting the whole pass.
+        if on_non_fatal is not None:
+            on_non_fatal(exc)
         return None
 
 
@@ -158,9 +176,17 @@ def _safe_segment(value: str) -> str:
     The cache layout is rooted under a user-controlled directory; we
     don't want a tool_id like "../../etc" to break out. Replace anything
     that isn't ascii alphanumerics, underscore, dash, or dot.
+
+    Embedded separators in ``"../../etc"`` are neutralised by the char filter
+    (``/`` -> ``_``), but a segment whose *entire* value is a path special
+    (``""``, ``"."``, ``".."``) survives the filter verbatim and would still
+    climb out of the root, so it is explicitly prefixed with ``_``.
     """
 
-    return "".join(ch if (ch.isalnum() or ch in "._-") else "_" for ch in str(value))
+    cleaned = "".join(ch if (ch.isalnum() or ch in "._-") else "_" for ch in str(value))
+    if cleaned in {"", ".", ".."}:
+        return "_" + cleaned  # ".." -> "_.." ; "." -> "_." ; "" -> "_"
+    return cleaned
 
 
 def _to_jsonable(obj: Any) -> Any:

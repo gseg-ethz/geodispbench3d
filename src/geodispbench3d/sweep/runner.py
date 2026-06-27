@@ -9,10 +9,15 @@ from __future__ import annotations
 
 import inspect
 import logging
+import math
 from collections.abc import Callable, Mapping, Sequence
 from collections.abc import Mapping as MappingABC
+from dataclasses import asdict, dataclass
 from pathlib import Path
-from typing import Any
+from typing import TYPE_CHECKING, Any
+
+if TYPE_CHECKING:
+    from geodispbench3d.suite.loader import SuiteConfig
 
 try:  # Ax 1.1+
     from ax.service.ax_client import AxClient, ObjectiveProperties  # type: ignore
@@ -27,10 +32,46 @@ except ImportError:  # pragma: no cover - optional dep or older Ax
             "pip install 'geodispbench3d[sweep]'"
         ) from ax_exc
 
+from geodispbench3d.diagnostics import PassDiagnostics
+from geodispbench3d.results.predictions_cache import write_prediction
+from geodispbench3d.sweep.trial_record import (
+    DatasetProvenance,
+    ParserProvenance,
+    ToolProvenance,
+    parser_fn_repr,
+    update_trial_record,
+    write_trial_summary,
+)
 from geodispbench3d.tool.base import ToolAdapter, TrialRequest
 
 from .evaluation import evaluate_trial
 from .parameters import SweepConfig
+
+
+@dataclass(frozen=True)
+class SweepRunSummary:
+    """Outcome of a suite sweep.
+
+    Carries the best trial plus the objective-specific finite-case signal
+    (F-05), aggregated across every trial in the sweep. The finite-case fields
+    live here — and on the per-trial log line + trial-level summary artifact —
+    so partial-case degradation is visible WITHOUT touching the Ax objective
+    payload handed to ``complete_trial``.
+
+    Extended additively by 02-05 (which appends ``non_fatal_failures``); keep
+    the field order so the existing defaults stay valid.
+
+    ``non_fatal_failures`` is the count of swallowed fail-soft failures across
+    the whole sweep (per-case evaluation skips, provenance-stamp / prediction-
+    cache / run-hash / trial-summary write failures), surfaced as the CLI's
+    aggregate "N non-fatal failures" line (F-08).
+    """
+
+    best_trial: Any
+    objective_name: str
+    objective_cases_finite: int = 0
+    objective_cases_total: int = 0
+    non_fatal_failures: int = 0
 
 
 class AxSweepRunner:
@@ -58,8 +99,8 @@ class AxSweepRunner:
         if self._trial_log_path is not None:
             try:
                 self._trial_log_path.parent.mkdir(parents=True, exist_ok=True)
-            except Exception:
-                self._logger.debug(
+            except OSError:
+                self._logger.warning(
                     "Unable to create trial log directory %s",
                     self._trial_log_path.parent,
                     exc_info=True,
@@ -173,10 +214,10 @@ class AxSweepRunner:
     def run_with_suite(
         self,
         *,
-        suite: Any,
+        suite: SuiteConfig,
         max_trials: int,
         on_record_rows: Callable[[Sequence[Mapping[str, Any]]], None] | None = None,
-    ) -> Any:
+    ) -> SweepRunSummary:
         """Run the sweep, evaluating each trial through the suite's metric set.
 
         For each trial, the adapter produces a :class:`TrialResult`; the suite's
@@ -190,6 +231,11 @@ class AxSweepRunner:
         later if multi-case sweeps need different aggregation).
         """
 
+        # Shared, deterministically-raising guard for the v2 EXEC-01 seam
+        # (parallel_trials / override_tool_mode). Invoked here AND in
+        # cli._cmd_sweep so a programmatic caller cannot bypass it (F-30).
+        suite.execution.ensure_supported()
+
         from geodispbench3d.metrics.registry import MetricRegistry
 
         registry = MetricRegistry()
@@ -197,20 +243,28 @@ class AxSweepRunner:
         if not cases:
             raise ValueError(f"Suite dataset {suite.dataset.id!r} has no cases")
 
+        total_objective_cases_finite = 0
+        total_objective_cases = 0
+        # One PassDiagnostics for the whole sweep; every fail-soft site records
+        # into it and the total rides out on SweepRunSummary (F-08).
+        pass_diag = PassDiagnostics()
         self._adapter.prepare()
         try:
             for _ in range(max_trials):
                 trial_data = self._ax.get_next_trial()
                 ax_trial_index, parameters = _normalize_trial_data(trial_data)
                 try:
-                    aggregated = self._evaluate_across_cases(
+                    aggregated, cases_finite, cases_total = self._evaluate_across_cases(
                         parameters,
                         cases,
                         suite,
                         registry,
                         ax_trial_index,
                         on_record_rows,
+                        diagnostics=pass_diag,
                     )
+                    total_objective_cases_finite += cases_finite
+                    total_objective_cases += cases_total
                     self._ax.complete_trial(trial_index=ax_trial_index, raw_data=aggregated)
                 except Exception as exc:  # pragma: no cover - defensive
                     self._logger.exception("Trial %s failed: %s", ax_trial_index, exc)
@@ -218,29 +272,36 @@ class AxSweepRunner:
         finally:
             self._adapter.teardown()
 
-        return self._ax.get_best_trial()
+        return SweepRunSummary(
+            best_trial=self._ax.get_best_trial(),
+            objective_name=self._objective_name,
+            objective_cases_finite=total_objective_cases_finite,
+            objective_cases_total=total_objective_cases,
+            non_fatal_failures=pass_diag.non_fatal_failures,
+        )
 
     def _evaluate_across_cases(
         self,
         parameters: Mapping[str, Any],
         cases: Sequence[Any],
-        suite: Any,
+        suite: SuiteConfig,
         registry: Any,
         ax_trial_index: int,
         on_record_rows: Callable[[Sequence[Mapping[str, Any]]], None] | None,
-    ) -> Mapping[str, float]:
-        from geodispbench3d.sweep.trial_record import (
-            DatasetProvenance,
-            ParserProvenance,
-            ToolProvenance,
-        )
+        *,
+        diagnostics: PassDiagnostics | None = None,
+    ) -> tuple[Mapping[str, float], int, int]:
+        # ``diagnostics`` is the sweep-wide non-fatal counter (F-08). Direct
+        # callers (tests) may omit it; a throwaway then keeps the recording
+        # sites uniform without changing behavior.
+        diag = diagnostics if diagnostics is not None else PassDiagnostics()
 
-        tool_yaml = getattr(suite.tool, "source_path", None) or getattr(
-            suite.tool.raw, "get", lambda *_: None
-        )("__source_path__")
+        # source_path is always populated by load_tool_config (tool/loader.py),
+        # so the typed field fully replaces the old getattr/.raw fallback chain.
+        tool_yaml = suite.tool.source_path
         tool_prov = ToolProvenance.from_yaml_path(suite.tool.id, tool_yaml)
         parser_prov = ParserProvenance(
-            fn=_parser_fn_repr(suite.tool.output_parser),
+            fn=parser_fn_repr(suite.tool.output_parser),
             options=dict(suite.tool.output_parser_options or {}),
         )
 
@@ -248,7 +309,8 @@ class AxSweepRunner:
         for case in cases:
             request = TrialRequest(parameters=parameters, case_name=case.name)
             result = self._adapter.run_trial(request)
-            self._record_run_hash(result.outputs.run_dir.name)
+            if not self._record_run_hash(result.outputs.run_dir.name):
+                diag.add("run_hash")
 
             dataset_prov = DatasetProvenance(id=suite.dataset.id, case=case.name)
             record_extras = {
@@ -272,15 +334,12 @@ class AxSweepRunner:
                 logger=self._logger,
             )
             per_case_scalars.append(dict(evaluation.scalar_metrics))
+            diag.add("evaluation", evaluation.non_fatal_failures)
 
             # Stamp provenance into the run's summary.json so downstream
             # --rescore / analyze invocations can find tool, dataset, and
             # parser context without consulting the original suite YAML.
             try:
-                from dataclasses import asdict
-
-                from geodispbench3d.sweep.trial_record import update_trial_record
-
                 update_trial_record(
                     result.outputs.run_dir,
                     {
@@ -292,12 +351,13 @@ class AxSweepRunner:
                         },
                     },
                 )
-            except Exception:  # pragma: no cover - never fail a trial on provenance
-                self._logger.debug(
+            except (OSError, TypeError):  # never fail a trial on provenance
+                self._logger.warning(
                     "Unable to stamp provenance for run %s",
                     result.outputs.run_dir,
                     exc_info=True,
                 )
+                diag.add("provenance_stamp")
 
             # Cache phase-2 output so future --rescore / analyze passes
             # can skip re-parsing. Failures here are non-fatal; the trial
@@ -305,8 +365,6 @@ class AxSweepRunner:
             predictions_root = getattr(suite.results, "predictions_root", None)
             if predictions_root is not None and evaluation.prediction is not None:
                 try:
-                    from geodispbench3d.results.predictions_cache import write_prediction
-
                     write_prediction(
                         Path(predictions_root),
                         tool_id=tool_prov.id,
@@ -321,55 +379,139 @@ class AxSweepRunner:
                             "run_dir": str(result.outputs.run_dir),
                         },
                     )
-                except Exception:  # pragma: no cover - cache failure shouldn't fail a trial
-                    self._logger.debug(
+                except (OSError, TypeError):  # cache failure shouldn't fail a trial
+                    self._logger.warning(
                         "Unable to cache prediction for run %s",
                         result.outputs.run_dir,
                         exc_info=True,
                     )
+                    diag.add("prediction_cache")
 
             if on_record_rows and evaluation.record_rows:
                 on_record_rows(list(evaluation.record_rows))
 
+        # Objective-specific finite-case signal (F-05), computed AFTER the loop
+        # for self._objective_name only — each objective key may be absent/NaN
+        # in different cases, so a single metric-agnostic count would mislead.
+        # Computed regardless of the single-case short-circuit below.
+        objective = self._objective_name
+        objective_cases_total = len(per_case_scalars)
+        objective_cases_finite = sum(
+            1
+            for d in per_case_scalars
+            if objective in d
+            and isinstance(d[objective], (int, float))
+            and not math.isnan(float(d[objective]))
+        )
+
         if len(per_case_scalars) == 1:
-            return per_case_scalars[0]
-        # Aggregate across cases by mean of each scalar metric, ignoring NaN.
-        keys = {k for d in per_case_scalars for k in d.keys()}
-        out: dict[str, float] = {}
-        import math
+            aggregated: Mapping[str, float] = per_case_scalars[0]
+        else:
+            # Aggregate across cases by mean of each scalar metric, ignoring NaN.
+            keys = {k for d in per_case_scalars for k in d.keys()}
+            out: dict[str, float] = {}
+            for key in keys:
+                values = [d[key] for d in per_case_scalars if key in d]
+                finite = [
+                    v for v in values if isinstance(v, (int, float)) and not math.isnan(float(v))
+                ]
+                if finite:
+                    out[key] = float(sum(finite) / len(finite))
+            aggregated = out
 
-        for key in keys:
-            values = [d[key] for d in per_case_scalars if key in d]
-            finite = [v for v in values if isinstance(v, (int, float)) and not math.isnan(float(v))]
-            if finite:
-                out[key] = float(sum(finite) / len(finite))
-        return out
+        self._surface_finite_case_signal(
+            suite,
+            ax_trial_index,
+            objective,
+            objective_cases_finite,
+            objective_cases_total,
+            aggregated.get(objective),
+            diagnostics=diag,
+        )
+        return aggregated, objective_cases_finite, objective_cases_total
 
-    def _record_run_hash(self, run_hash: str) -> None:
-        if self._trial_log_path is None:
+    def _surface_finite_case_signal(
+        self,
+        suite: SuiteConfig,
+        ax_trial_index: int,
+        objective: str,
+        objective_cases_finite: int,
+        objective_cases_total: int,
+        aggregated_objective: float | None,
+        *,
+        diagnostics: PassDiagnostics,
+    ) -> None:
+        """Make objective-specific partial-case failure visible (F-05).
+
+        Emits a per-trial log line and writes a dedicated trial-level summary
+        artifact — both OFF the Ax objective payload. The artifact write is
+        fail-soft: it can never fail a trial, and a swallowed write failure is
+        recorded into the pass-wide ``diagnostics`` as ``"trial_summary"`` so it
+        rides out on ``SweepRunSummary.non_fatal_failures`` (F-08).
+        """
+
+        if objective_cases_finite < objective_cases_total:
+            self._logger.warning(
+                "Trial %s objective %s: only %d/%d cases finite (partial failure)",
+                ax_trial_index,
+                objective,
+                objective_cases_finite,
+                objective_cases_total,
+            )
+        else:
+            self._logger.info(
+                "Trial %s objective %s: %d/%d cases finite",
+                ax_trial_index,
+                objective,
+                objective_cases_finite,
+                objective_cases_total,
+            )
+
+        run_dir_root = suite.results.run_dir_root
+        if run_dir_root is None:
             return
+        try:
+            write_trial_summary(
+                Path(run_dir_root),
+                ax_trial_index,
+                {
+                    "trial_index": ax_trial_index,
+                    "objective_name": objective,
+                    "objective_cases_finite": objective_cases_finite,
+                    "objective_cases_total": objective_cases_total,
+                    "aggregated_objective": aggregated_objective,
+                },
+            )
+        except Exception:  # never fail a trial on summary write
+            self._logger.warning(
+                "Unable to write trial-level summary for trial %s",
+                ax_trial_index,
+                exc_info=True,
+            )
+            diagnostics.add("trial_summary")
+
+    def _record_run_hash(self, run_hash: str) -> bool:
+        """Append a run hash to the trial log; return ``False`` on a write failure.
+
+        No configured log path is not a failure (returns ``True``): there is
+        simply nothing to record. Only an actual ``OSError`` on the append is a
+        fail-soft failure the caller counts (F-08).
+        """
+
+        if self._trial_log_path is None:
+            return True
         try:
             with self._trial_log_path.open("a", encoding="utf-8") as fh:
                 fh.write(f"{run_hash}\n")
-        except Exception:
-            self._logger.debug(
+        except OSError:
+            self._logger.warning(
                 "Unable to append run hash %s to %s",
                 run_hash,
                 self._trial_log_path,
                 exc_info=True,
             )
-
-
-def _parser_fn_repr(fn: Any) -> str | None:
-    """Render a parser callable as a stable ``"package.module:attr"`` string."""
-
-    if fn is None:
-        return None
-    module = getattr(fn, "__module__", None)
-    qualname = getattr(fn, "__qualname__", getattr(fn, "__name__", None))
-    if module and qualname:
-        return f"{module}:{qualname}"
-    return None
+            return False
+        return True
 
 
 def _normalize_trial_data(trial_data: Any) -> tuple[int, dict[str, Any]]:
@@ -409,4 +551,4 @@ def _normalize_trial_data(trial_data: Any) -> tuple[int, dict[str, Any]]:
     return trial_index, params
 
 
-__all__ = ["AxSweepRunner"]
+__all__ = ["AxSweepRunner", "SweepRunSummary"]

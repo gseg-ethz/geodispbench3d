@@ -2,8 +2,12 @@
 
 from __future__ import annotations
 
+import argparse
+import logging
 import textwrap
 from pathlib import Path
+
+import pytest
 
 from geodispbench3d.analysis import analyze, load_analysis
 from geodispbench3d.results.predictions_cache import write_prediction
@@ -116,3 +120,62 @@ def test_analyze_handles_missing_provenance_via_single_case_fallback(
     summary = analyze(config=config)
     assert summary.total == 3  # two from bootstrap, one bare
     assert summary.succeeded == 3
+
+
+def test_analyze_corrupt_prediction_counted_fail_soft(tmp_path: Path) -> None:
+    """A present-but-corrupt prediction JSON is swallowed fail-soft and counted
+    in AnalysisSummary.non_fatal_failures while the readable ones still score (F-08)."""
+
+    analysis_yaml = _bootstrap_analysis(tmp_path)
+    # A file that exists but is invalid JSON -> read_prediction's on_non_fatal
+    # fires (json.JSONDecodeError), the prediction is skipped, and the failure
+    # is counted without aborting the pass.
+    corrupt_dir = tmp_path / "pcache" / "bad-tool" / "stub-dataset" / "only-case"
+    corrupt_dir.mkdir(parents=True, exist_ok=True)
+    (corrupt_dir / "corrupt-run.json").write_text("{ this is not valid json", encoding="utf-8")
+
+    config = load_analysis(analysis_yaml)
+    summary = analyze(config=config)
+    assert summary.total == 3  # two readable + one corrupt
+    assert summary.succeeded == 2
+    assert summary.skipped_unreadable == 1
+    assert summary.non_fatal_failures == 1
+
+
+def test_analyze_non_utf8_prediction_counted_fail_soft(tmp_path: Path) -> None:
+    """A present-but-non-UTF-8 prediction JSON raises UnicodeDecodeError during
+    the decode; it must be swallowed fail-soft (counted, skipped) while the
+    readable predictions still score and the pass does not crash (CR-01 / F-08)."""
+
+    analysis_yaml = _bootstrap_analysis(tmp_path)
+    bad_dir = tmp_path / "pcache" / "bad-tool" / "stub-dataset" / "only-case"
+    bad_dir.mkdir(parents=True, exist_ok=True)
+    (bad_dir / "corrupt-run.json").write_bytes(b"\xff\xfe\x00bad")  # invalid UTF-8
+
+    config = load_analysis(analysis_yaml)
+    summary = analyze(config=config)
+    assert summary.total == 3  # two readable + one non-UTF-8
+    assert summary.succeeded == 2
+    assert summary.skipped_unreadable == 1
+    assert summary.non_fatal_failures == 1
+
+
+def test_cli_analyze_emits_non_fatal_failures_line(
+    tmp_path: Path, caplog: pytest.LogCaptureFixture
+) -> None:
+    """_cmd_analyze surfaces the aggregate non-fatal-failure line (F-08)."""
+
+    from geodispbench3d import cli
+
+    analysis_yaml = _bootstrap_analysis(tmp_path)
+    corrupt_dir = tmp_path / "pcache" / "bad-tool" / "stub-dataset" / "only-case"
+    corrupt_dir.mkdir(parents=True, exist_ok=True)
+    (corrupt_dir / "corrupt-run.json").write_text("{ not valid json", encoding="utf-8")
+
+    args = argparse.Namespace(analysis=str(analysis_yaml), pass_id=None, log_level="INFO")
+    with caplog.at_level(logging.INFO, logger="geodispbench3d.cli"):
+        cli._cmd_analyze(args)
+
+    assert any(
+        "non-fatal failures" in r.getMessage() and "1" in r.getMessage() for r in caplog.records
+    )

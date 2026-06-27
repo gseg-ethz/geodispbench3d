@@ -15,6 +15,10 @@ import argparse
 import logging
 import sys
 from pathlib import Path
+from typing import TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from geodispbench3d.suite.loader import SuiteConfig
 
 
 def main(argv: list[str] | None = None) -> int:
@@ -122,54 +126,68 @@ def _cmd_run(args: argparse.Namespace) -> int:
 
 def _cmd_sweep(
     args: argparse.Namespace,
-    suite: object,
+    suite: SuiteConfig,
     on_record_rows,
     logger: logging.Logger,
 ) -> int:
     from geodispbench3d.sweep.parameters import SweepConfig, build_parameter_specs
     from geodispbench3d.sweep.runner import AxSweepRunner
 
-    max_trials = args.max_trials or suite.search.max_trials  # type: ignore[attr-defined]
+    # Shared guard for the v2 EXEC-01 seam: raise deterministically rather than
+    # silently no-op an unsupported parallel_trials / override_tool_mode (D-09).
+    # run_with_suite enforces the same guard, so neither path can bypass it.
+    suite.execution.ensure_supported()
+
+    max_trials = args.max_trials or suite.search.max_trials
 
     sweep_cfg = SweepConfig(
-        parameters=suite.tool.hyperparameters,  # type: ignore[attr-defined]
+        parameters=suite.tool.hyperparameters,
         max_trials=max_trials,
-        sobol_trials=suite.search.sobol_trials,  # type: ignore[attr-defined]
-        objective_name=suite.search.objective,  # type: ignore[attr-defined]
-        minimize=suite.search.minimize,  # type: ignore[attr-defined]
+        sobol_trials=suite.search.sobol_trials,
+        objective_name=suite.search.objective,
+        minimize=suite.search.minimize,
     )
     parameter_specs = build_parameter_specs(sweep_cfg)
 
     logger.info(
         "Running suite %s (tool=%s, dataset=%s, trials=%d, objective=%s)",
-        suite.id,  # type: ignore[attr-defined]
-        suite.tool.id,  # type: ignore[attr-defined]
-        suite.dataset.id,  # type: ignore[attr-defined]
+        suite.id,
+        suite.tool.id,
+        suite.dataset.id,
         max_trials,
-        suite.search.objective,  # type: ignore[attr-defined]
+        suite.search.objective,
     )
 
     runner = AxSweepRunner(
-        adapter=suite.tool.adapter,  # type: ignore[attr-defined]
+        adapter=suite.tool.adapter,
         sweep_config=sweep_cfg,
         parameter_specs=parameter_specs,
-        objective_name=suite.search.objective,  # type: ignore[attr-defined]
-        minimize=suite.search.minimize,  # type: ignore[attr-defined]
+        objective_name=suite.search.objective,
+        minimize=suite.search.minimize,
         logger=logger,
     )
 
-    best = runner.run_with_suite(
+    result = runner.run_with_suite(
         suite=suite,
         max_trials=max_trials,
         on_record_rows=on_record_rows,
     )
-    logger.info("Best trial: %s", best)
+    logger.info("Best trial: %s", result.best_trial)
+    logger.info(
+        "Objective %s: %d/%d cases finite across the sweep",
+        result.objective_name,
+        result.objective_cases_finite,
+        result.objective_cases_total,
+    )
+    logger.info(
+        "%d non-fatal failures (swallowed, fail-soft) during the sweep", result.non_fatal_failures
+    )
     return 0
 
 
 def _cmd_rescore(
     args: argparse.Namespace,
-    suite: object,
+    suite: SuiteConfig,
     on_record_rows,
     logger: logging.Logger,
 ) -> int:
@@ -189,9 +207,9 @@ def _cmd_rescore(
     logger.info(
         "Rescoring suite %s (tool=%s, dataset=%s, "
         "reuse_parser_options=%s, use_prediction_cache=%s, pass_id=%s)",
-        suite.id,  # type: ignore[attr-defined]
-        suite.tool.id,  # type: ignore[attr-defined]
-        suite.dataset.id,  # type: ignore[attr-defined]
+        suite.id,
+        suite.tool.id,
+        suite.dataset.id,
         options.reuse_parser_options,
         options.use_prediction_cache,
         options.resolved_pass_id(),
@@ -210,6 +228,10 @@ def _cmd_rescore(
         summary.cache_hits,
         summary.parser_misses,
         summary.rows_emitted,
+    )
+    logger.info(
+        "%d non-fatal failures (swallowed, fail-soft) during the rescore",
+        summary.non_fatal_failures,
     )
     return 0 if summary.succeeded == summary.total else 1
 
@@ -252,6 +274,10 @@ def _cmd_analyze(args: argparse.Namespace) -> int:
         summary.skipped_unreadable,
         summary.skipped_no_case,
         summary.rows_emitted,
+    )
+    logger.info(
+        "%d non-fatal failures (swallowed, fail-soft) during the analyze",
+        summary.non_fatal_failures,
     )
     return 0 if summary.succeeded == summary.total else 1
 
