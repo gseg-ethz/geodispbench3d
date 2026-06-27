@@ -28,6 +28,7 @@ timestamp suffix is asserted anywhere — F-09 will switch isoformat output to
 
 from __future__ import annotations
 
+import argparse
 import json
 import logging
 import sys
@@ -551,3 +552,47 @@ def test_f08_clean_sweep_has_zero_non_fatal_failures(
 
     result = runner.run_with_suite(suite=suite, max_trials=2)
     assert result.non_fatal_failures == 0
+
+
+# ---------------------------------------------------------------------------
+# Task 3 (F-08): _cmd_sweep surfaces an aggregate "N non-fatal failures" line.
+# ---------------------------------------------------------------------------
+
+
+def test_cli_sweep_emits_non_fatal_failures_line(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, caplog: pytest.LogCaptureFixture
+) -> None:
+    """_cmd_sweep logs the aggregate non-fatal-failure count from the summary.
+
+    AxSweepRunner is replaced with a fake whose run_with_suite returns a
+    SweepRunSummary carrying non_fatal_failures, so the CLI line is exercised
+    without a real Ax sweep (the runner-level counting is covered above)."""
+
+    from geodispbench3d import cli
+
+    suite = _bootstrap_suite(tmp_path, ["only"])
+
+    class _FakeRunner:
+        def __init__(self, **_kwargs: Any) -> None:
+            pass
+
+        def run_with_suite(self, *, suite: Any, max_trials: int, on_record_rows: Any = None) -> Any:
+            return SweepRunSummary(
+                best_trial=None,
+                objective_name="median_displacement_error",
+                objective_cases_finite=1,
+                objective_cases_total=2,
+                non_fatal_failures=3,
+            )
+
+    monkeypatch.setattr("geodispbench3d.sweep.runner.AxSweepRunner", _FakeRunner)
+
+    args = argparse.Namespace(max_trials=1)
+    logger = logging.getLogger("geodispbench3d.cli")
+    with caplog.at_level(logging.INFO, logger="geodispbench3d.cli"):
+        rc = cli._cmd_sweep(args, suite, None, logger)
+
+    assert rc == 0
+    assert any(
+        "non-fatal failures" in r.getMessage() and "3" in r.getMessage() for r in caplog.records
+    ), [r.getMessage() for r in caplog.records]

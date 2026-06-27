@@ -2,10 +2,14 @@
 
 from __future__ import annotations
 
+import argparse
+import logging
 import sys
 import textwrap
 from dataclasses import asdict
 from pathlib import Path
+
+import pytest
 
 from geodispbench3d.results.predictions_cache import write_prediction
 from geodispbench3d.suite.loader import load_suite
@@ -190,6 +194,39 @@ def test_rescore_malformed_rescore_log_is_counted_fail_soft(tmp_path: Path) -> N
     assert summary.succeeded == 1
     # F-08: the swallowed AttributeError on the append was counted.
     assert summary.non_fatal_failures == 1
+
+
+def test_cli_rescore_emits_non_fatal_failures_line(
+    tmp_path: Path, caplog: pytest.LogCaptureFixture
+) -> None:
+    """_cmd_rescore surfaces the aggregate non-fatal-failure line (F-08).
+
+    Drives the real _cmd_rescore end-to-end over a run dir whose malformed
+    rescore_log triggers one swallowed AttributeError, and asserts the CLI
+    logs the aggregate count."""
+
+    from geodispbench3d import cli
+
+    suite = load_suite(_bootstrap_bench(tmp_path))
+    run_dir = tmp_path / "runs" / "abcdef123456"
+    record_path = trial_record_path(run_dir)
+    record = load_trial_record(record_path)
+    record["rescore_log"] = {"unexpectedly": "a-dict"}
+    write_trial_record(record_path, record)
+
+    args = argparse.Namespace(
+        max_trials=None,
+        reuse_parser_options=False,
+        use_prediction_cache=False,
+        pass_id=None,
+    )
+    logger = logging.getLogger("geodispbench3d.cli")
+    with caplog.at_level(logging.INFO, logger="geodispbench3d.cli"):
+        cli._cmd_rescore(args, suite, None, logger)
+
+    assert any(
+        "non-fatal failures" in r.getMessage() and "1" in r.getMessage() for r in caplog.records
+    )
 
 
 def test_rescore_skips_failed_runs(tmp_path: Path) -> None:

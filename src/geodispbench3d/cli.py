@@ -174,6 +174,9 @@ def _cmd_sweep(
         result.objective_cases_finite,
         result.objective_cases_total,
     )
+    logger.info(
+        "%d non-fatal failures (swallowed, fail-soft) during the sweep", result.non_fatal_failures
+    )
     return 0
 
 
@@ -221,6 +224,10 @@ def _cmd_rescore(
         summary.parser_misses,
         summary.rows_emitted,
     )
+    logger.info(
+        "%d non-fatal failures (swallowed, fail-soft) during the rescore",
+        summary.non_fatal_failures,
+    )
     return 0 if summary.succeeded == summary.total else 1
 
 
@@ -262,6 +269,10 @@ def _cmd_analyze(args: argparse.Namespace) -> int:
         summary.skipped_unreadable,
         summary.skipped_no_case,
         summary.rows_emitted,
+    )
+    logger.info(
+        "%d non-fatal failures (swallowed, fail-soft) during the analyze",
+        summary.non_fatal_failures,
     )
     return 0 if summary.succeeded == summary.total else 1
 
