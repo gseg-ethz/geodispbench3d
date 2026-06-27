@@ -4,17 +4,17 @@ milestone: v1.0
 milestone_name: milestone
 current_phase: 03
 current_phase_name: cli-hardening
-status: executing
+status: verifying
 stopped_at: Phase 3 context gathered
-last_updated: "2026-06-27T14:29:32.037Z"
+last_updated: "2026-06-27T14:37:33.513Z"
 last_activity: 2026-06-27
 last_activity_desc: Phase 03 execution started
 progress:
   total_phases: 5
-  completed_phases: 2
+  completed_phases: 3
   total_plans: 13
-  completed_plans: 12
-  percent: 40
+  completed_plans: 13
+  percent: 60
 ---
 
 # Project State
@@ -30,7 +30,7 @@ See: .planning/PROJECT.md (updated 2026-06-26)
 
 Phase: 03 (cli-hardening) — EXECUTING
 Plan: 4 of 4
-Status: Ready to execute
+Status: Phase complete — ready for verification
 Last activity: 2026-06-27 — Phase 03 execution started
 
 Progress: [░░░░░░░░░░] 0%
@@ -68,6 +68,7 @@ Progress: [░░░░░░░░░░] 0%
 | Phase 03 P01 | 15min | 3 tasks | 8 files |
 | Phase 03 P02 | 8min | 3 tasks | 4 files |
 | Phase 03 P03 | 35min | 3 tasks | 3 files |
+| Phase 03 P04 | 12min | 2 tasks | 10 files |
 
 ## Accumulated Context
 
@@ -96,6 +97,8 @@ Recent decisions affecting current work:
 - [Phase ?]: 02-07: ExecutionConfig.ensure_supported() raises deterministically (D-09) on non-default parallel_trials/override_tool_mode, called from BOTH _cmd_sweep and run_with_suite (bypass-proof); fields retained; FIX-04 green-gate closed
 - [Phase ?]: [Phase 03-01]: success=False reported to Ax via log_trial_failure on BOTH runner paths (RESOLVED-B shared _raise_if_failed), never scored; all-failed sweep yields best_trial=None + successful_trials=0 (RESOLVED-A _resolve_best_trial). Typed counters split timeouts (non-exit, D-05) from trial_failures/eval_failures (exit-driving). Preflight validates leading exe + conda env only, NOT the in-env binary (D-02 accepted limitation; gap covered by trial 0). CLI-02/CLI-03 left Pending — shared with Plans 03/04.
 - [Phase ?]: [Phase 03-02]: rescore is its own subcommand (run rejects rescore-only flags => exit 2); exit taxonomy 0/1/2 across all 5 handlers incl. sweep (1 if trial_failures|eval_failures|successful_trials==0; timeouts non-fatal per D-05 but zero-success=>1 per RESOLVED-A); rescore 1 if parser_misses|eval_failures; analyze 1 if skipped_unreadable|eval_failures. Narrow _load_or_clean_exit wraps ONLY loader calls (runtime ValueError keeps traceback); ToolPreflightError caught at dispatch boundary; --timeout via set_timeout_override; --traceback single <subcommand> form; cli.py --rescore scrub done (repo-wide is Plan 04).
+- [Phase ?]: Plan 04 docs: timeout exit semantics per D-05 + RESOLVED-A — an individual timeout is NON-FATAL to the exit code; only a genuine crash/eval failure or a zero-success sweep drives exit 1.
+- [Phase ?]: Plan 04 scrub rule: docs/ migration note may NAME the removed --rescore flag in prose but reproduces no full old command-form; src/ forbids ANY --rescore token (repo-wide negative grep gate).
 
 ### Open Questions (surface at phase discussions)
 
@@ -127,6 +130,6 @@ yet.
 
 ## Session Continuity
 
-Last session: 2026-06-27T14:29:13.994Z
+Last session: 2026-06-27T14:37:00.449Z
 Stopped at: Phase 3 context gathered
 Resume file: .planning/phases/03-cli-hardening/03-CONTEXT.md
