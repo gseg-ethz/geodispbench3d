@@ -4,4 +4,8 @@ from __future__ import annotations
 
 import pytest
 
-iof3D = pytest.importorskip("iof3D", reason="install with: pip install 'geodispbench3d[iof3d]'")
+iof3D = pytest.importorskip(
+    "iof3D",
+    reason="iof3D must be installed from its (currently private) source; "
+    "the public [iof3d] extra is disabled until iof3D publishes",
+)
