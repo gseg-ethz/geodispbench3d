@@ -25,7 +25,7 @@ Out of scope: CI/CD, build, and trusted-publishing automation (Phase 5); any new
 ## Implementation Decisions
 
 ### iof3D in the public distribution (open question — RESOLVED)
-- **D-01: Single wheel, ship iof3D adapter *dormant*.** Keep `geodispbench3d_iof3d` as a
+- **D-01: Single wheel, ship iof3D adapter dormant.** Keep `geodispbench3d_iof3d` as a
   subpackage listed in `[tool.setuptools] packages` (do **not** drop it from the package list).
   Rationale: the `packages` list governs *both* the published wheel and editable installs, so
   excluding it would break the maintainer's local research workflow. Nothing is stripped from

@@ -45,7 +45,7 @@ All python/pip/pytest invocations MUST route through `conda run -n iof3d_cosicor
 | 04-01-03 | 01 | 1 | LIC-01/04 | T-04-01-I | README long-description states BSD-3-Clause; no Proprietary | unit | `conda run -n iof3d_cosicorr3d-dev312 pytest tests/core/test_packaging_metadata.py -x` | ✅ (Task 1) | ⬜ pending |
 | 04-02-01 | 02 | 2 | PKG-01/02 | T-04-04-T | Public import succeeds with iof3D/pc2img blocked; no eager private-dep path | unit (simulated absence, RED-first) | `conda run -n iof3d_cosicorr3d-dev312 pytest tests/core/test_iof3d_import_guard.py -x` | ❌ W0 (this task creates it) | ⬜ pending |
 | 04-02-02 | 02 | 2 | PKG-01 | T-04-03-R / T-04-04-T | Adapter use raises actionable ImportError chaining original; iof3d-ax exits 1 cleanly | unit | `conda run -n iof3d_cosicorr3d-dev312 pytest tests/core/test_iof3d_import_guard.py::test_public_import_succeeds_use_fails tests/core/test_iof3d_import_guard.py::test_iof3d_ax_launcher_exits_cleanly -x` | ✅ (Task 1) | ⬜ pending |
-| 04-02-03 | 02 | 2 | PKG-01/02/03 | T-04-02-D / T-04-SC | iof3d extra disabled (unresolvable private dep removed); f2s3 pins first-party pchandler ~= 2.1 | unit + integration-deferred | `conda run -n iof3d_cosicorr3d-dev312 pytest tests/core/test_iof3d_import_guard.py -x` (unit); fresh-venv resolution gate DEFERRED to Phase 5 CI f2s3 job | ✅ (Task 1) | ⬜ pending |
+| 04-02-03 | 02 | 2 | PKG-01/02/03 | T-04-02-D / T-04-SC | iof3d extra disabled (unresolvable private dep removed); f2s3 pins first-party pchandler ~= 2.1 | unit + in-phase resolution smoke | `conda run -n iof3d_cosicorr3d-dev312 pytest tests/core/test_iof3d_import_guard.py -x` (unit) + throwaway-venv `pip install '.[f2s3]'` + F2S3 parser-import smoke, built via the conda interpreter (in-phase, Task 3 verify); only the full behavioral `pytest tests/f2s3` against installed 2.1.0 DEFERRED to Phase 5 CI f2s3 job | ✅ (Task 1) | ⬜ pending |
 
 *Status: ⬜ pending · ✅ green · ❌ red · ⚠️ flaky*
 
@@ -65,7 +65,7 @@ Wave 0 = the RED-first test tasks embedded as Task 1 of each plan (task-level TD
 
 | Behavior | Requirement | Why Manual | Test Instructions |
 |----------|-------------|------------|-------------------|
-| Fresh-venv `.[f2s3]` resolution pulls `pchandler 2.1.0` (no iof3D/pc2img) and `pytest tests/f2s3` passes against the installed 2.1.0 | PKG-02/PKG-03 (runtime gate) | The mandated dev env holds an editable `pchandler 2.0.0rc8` that does NOT satisfy `~= 2.1`, so the pinned release cannot be exercised in-env. DEFERRED to Phase 5's already-enabled CI `f2s3` job (session decision 2). Symbol/API compatibility is already VERIFIED against the 2.1.0 wheel in research. | Phase 5 CI: `pip install .[f2s3,dev]` in a clean runner, `pytest tests/f2s3 -v`, `pip list \| grep -iE "iof3d\|pc2img"` empty. |
+| Full behavioral `pytest tests/f2s3` passes against the installed `pchandler 2.1.0` | PKG-02/PKG-03 (behavioral gate) | The mandated dev env holds an editable `pchandler 2.0.0rc8` that does NOT satisfy `~= 2.1`, so the pinned release's full test suite cannot be exercised in-env. DEFERRED to Phase 5's already-enabled CI `f2s3` job. Symbol/API compatibility is already VERIFIED against the 2.1.0 wheel in research, and the **resolution + parser-import smoke is now proven in-phase** (04-02 Task 3 throwaway-venv verify — supersedes session-decision-2's full deferral per the Phase-4 review override). | Phase 5 CI: `pip install .[f2s3,dev]` in a clean runner, `pytest tests/f2s3 -v`, `pip list \| grep -iE "iof3d\|pc2img"` empty. |
 
 ---
 
