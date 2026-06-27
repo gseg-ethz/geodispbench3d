@@ -12,7 +12,10 @@ import logging
 from collections.abc import Callable, Mapping, Sequence
 from collections.abc import Mapping as MappingABC
 from pathlib import Path
-from typing import Any
+from typing import TYPE_CHECKING, Any
+
+if TYPE_CHECKING:
+    from geodispbench3d.suite.loader import SuiteConfig
 
 try:  # Ax 1.1+
     from ax.service.ax_client import AxClient, ObjectiveProperties  # type: ignore
@@ -173,7 +176,7 @@ class AxSweepRunner:
     def run_with_suite(
         self,
         *,
-        suite: Any,
+        suite: SuiteConfig,
         max_trials: int,
         on_record_rows: Callable[[Sequence[Mapping[str, Any]]], None] | None = None,
     ) -> Any:
@@ -224,7 +227,7 @@ class AxSweepRunner:
         self,
         parameters: Mapping[str, Any],
         cases: Sequence[Any],
-        suite: Any,
+        suite: SuiteConfig,
         registry: Any,
         ax_trial_index: int,
         on_record_rows: Callable[[Sequence[Mapping[str, Any]]], None] | None,
