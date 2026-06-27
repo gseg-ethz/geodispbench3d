@@ -126,7 +126,7 @@ yet.
 
 | Category | Item | Status | Deferred At |
 |----------|------|--------|-------------|
-| *(none)* | | | |
+| CI-health | Green the CI Lint gate (raw `pyright` red on a standing 14-error baseline → Test/Build skipped on every PR). Options + decision tracked in ROADMAP Phase 5 open question. | Deferred → Phase 5 | 2026-06-27 (Phase 3 ship, PR #3) |
 
 ## Session Continuity
 
