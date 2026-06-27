@@ -2,18 +2,18 @@
 gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
-current_phase: 3
-current_phase_name: CLI Hardening
-status: "Phase 2 shipped — PR #2"
+current_phase: 03
+current_phase_name: cli-hardening
+status: executing
 stopped_at: Phase 3 context gathered
-last_updated: "2026-06-27T12:10:22.100Z"
+last_updated: "2026-06-27T13:52:19.852Z"
 last_activity: 2026-06-27
-last_activity_desc: Phase 03 planning complete
+last_activity_desc: Phase 03 execution started
 progress:
   total_phases: 5
   completed_phases: 2
-  total_plans: 9
-  completed_plans: 9
+  total_plans: 13
+  completed_plans: 10
   percent: 40
 ---
 
@@ -24,14 +24,14 @@ progress:
 See: .planning/PROJECT.md (updated 2026-06-26)
 
 **Core value:** Nothing is published to PyPI until the codebase is demonstrably lean, correct, well-tested, and its CLI-integration story is sound.
-**Current focus:** Phase 02 — targeted-fixes
+**Current focus:** Phase 03 — cli-hardening
 
 ## Current Position
 
-Phase: 3 — CLI Hardening
-Plan: Not started
-Status: Phase 2 shipped — PR #2
-Last activity: 2026-06-27 — Phase 03 planning complete
+Phase: 03 (cli-hardening) — EXECUTING
+Plan: 2 of 4
+Status: Ready to execute
+Last activity: 2026-06-27 — Phase 03 execution started
 
 Progress: [░░░░░░░░░░] 0%
 
@@ -65,6 +65,7 @@ Progress: [░░░░░░░░░░] 0%
 | Phase 02 P05 | 15min | 3 tasks | 11 files |
 | Phase 02 P06 | 15min | 3 tasks | 8 files |
 | Phase 02 P07 | 18min | 3 tasks | 12 files |
+| Phase 03 P01 | 15min | 3 tasks | 8 files |
 
 ## Accumulated Context
 
@@ -91,6 +92,7 @@ Recent decisions affecting current work:
 - [Phase ?]: 02-07: F-03 parser_fn_repr single-sourced in sweep/trial_record.py (public, __all__); runner+rescore import it; byte-identity locked across module/method/nested(<locals>) callables so the sweep/rescore cache key cannot drift
 - [Phase ?]: 02-07: F-30 four dead fields deleted (outputs_options, scan_by_epoch, gt_kinds_supported, yaml_hash incl. _tool_from_record deserializer); old yaml_hash records still load; hash_file retained as public util
 - [Phase ?]: 02-07: ExecutionConfig.ensure_supported() raises deterministically (D-09) on non-default parallel_trials/override_tool_mode, called from BOTH _cmd_sweep and run_with_suite (bypass-proof); fields retained; FIX-04 green-gate closed
+- [Phase ?]: [Phase 03-01]: success=False reported to Ax via log_trial_failure on BOTH runner paths (RESOLVED-B shared _raise_if_failed), never scored; all-failed sweep yields best_trial=None + successful_trials=0 (RESOLVED-A _resolve_best_trial). Typed counters split timeouts (non-exit, D-05) from trial_failures/eval_failures (exit-driving). Preflight validates leading exe + conda env only, NOT the in-env binary (D-02 accepted limitation; gap covered by trial 0). CLI-02/CLI-03 left Pending — shared with Plans 03/04.
 
 ### Open Questions (surface at phase discussions)
 
@@ -122,6 +124,6 @@ yet.
 
 ## Session Continuity
 
-Last session: 2026-06-27T11:33:47.878Z
+Last session: 2026-06-27T13:51:12.052Z
 Stopped at: Phase 3 context gathered
 Resume file: .planning/phases/03-cli-hardening/03-CONTEXT.md
