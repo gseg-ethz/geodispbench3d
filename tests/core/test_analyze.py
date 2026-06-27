@@ -142,6 +142,24 @@ def test_analyze_corrupt_prediction_counted_fail_soft(tmp_path: Path) -> None:
     assert summary.non_fatal_failures == 1
 
 
+def test_analyze_non_utf8_prediction_counted_fail_soft(tmp_path: Path) -> None:
+    """A present-but-non-UTF-8 prediction JSON raises UnicodeDecodeError during
+    the decode; it must be swallowed fail-soft (counted, skipped) while the
+    readable predictions still score and the pass does not crash (CR-01 / F-08)."""
+
+    analysis_yaml = _bootstrap_analysis(tmp_path)
+    bad_dir = tmp_path / "pcache" / "bad-tool" / "stub-dataset" / "only-case"
+    bad_dir.mkdir(parents=True, exist_ok=True)
+    (bad_dir / "corrupt-run.json").write_bytes(b"\xff\xfe\x00bad")  # invalid UTF-8
+
+    config = load_analysis(analysis_yaml)
+    summary = analyze(config=config)
+    assert summary.total == 3  # two readable + one non-UTF-8
+    assert summary.succeeded == 2
+    assert summary.skipped_unreadable == 1
+    assert summary.non_fatal_failures == 1
+
+
 def test_cli_analyze_emits_non_fatal_failures_line(
     tmp_path: Path, caplog: pytest.LogCaptureFixture
 ) -> None:

@@ -129,7 +129,11 @@ def read_prediction(
     try:
         with p.open("r", encoding="utf-8") as fh:
             return json.load(fh)
-    except (OSError, json.JSONDecodeError) as exc:
+    except (OSError, json.JSONDecodeError, UnicodeDecodeError) as exc:
+        # UnicodeDecodeError is a sibling of json.JSONDecodeError under
+        # ValueError: a present-but-non-UTF-8 cache file raises it during the
+        # decode in fh.read(), before any JSON parsing. Catching it keeps the
+        # fail-soft contract (F-08) instead of aborting the whole pass.
         if on_non_fatal is not None:
             on_non_fatal(exc)
         return None

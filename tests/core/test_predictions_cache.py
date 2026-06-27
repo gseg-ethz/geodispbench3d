@@ -64,6 +64,23 @@ def test_find_predictions_filters_by_segment(tmp_path: Path) -> None:
     assert find_predictions(tmp_path, tool_id="missing") == []
 
 
+def test_read_prediction_non_utf8_degrades_and_counts(tmp_path: Path) -> None:
+    """A present-but-non-UTF-8 cache file raises UnicodeDecodeError during the
+    decode; read_prediction must degrade to None AND invoke on_non_fatal so the
+    pass-level diagnostics count it rather than the exception aborting the pass
+    (CR-01 / F-08)."""
+
+    bad = tmp_path / "bad.json"
+    bad.write_bytes(b"\xff\xfe\x00bad")  # invalid UTF-8, not OSError, not JSONDecodeError
+
+    counted: list[Exception] = []
+    result = read_prediction(bad, on_non_fatal=counted.append)
+
+    assert result is None
+    assert len(counted) == 1
+    assert isinstance(counted[0], UnicodeDecodeError)
+
+
 def test_unsafe_segments_are_sanitised(tmp_path: Path) -> None:
     """tool_id like ``../escape`` must not break out of the cache root."""
 

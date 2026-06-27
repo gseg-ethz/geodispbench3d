@@ -277,6 +277,49 @@ def test_old_record_with_yaml_hash_still_deserializes(tmp_path: Path) -> None:
     assert parser_prov is not None and parser_prov.fn == "stub_pkg:parse"
 
 
+def test_load_trial_record_non_utf8_degrades_and_counts(tmp_path: Path) -> None:
+    """A present-but-non-UTF-8 summary.json raises UnicodeDecodeError during the
+    decode; load_trial_record must degrade to {} AND invoke on_non_fatal so the
+    pass-level diagnostics count it rather than the exception aborting the pass
+    (CR-01 / F-08)."""
+
+    run_dir = tmp_path / "runs" / "badutf8"
+    run_dir.mkdir(parents=True)
+    record_path = trial_record_path(run_dir)
+    record_path.write_bytes(b"\xff\xfe\x00bad")  # invalid UTF-8
+
+    counted: list[Exception] = []
+    result = load_trial_record(record_path, on_non_fatal=counted.append)
+
+    assert result == {}
+    assert len(counted) == 1
+    assert isinstance(counted[0], UnicodeDecodeError)
+
+
+def test_rescore_non_utf8_summary_counted_fail_soft(tmp_path: Path) -> None:
+    """A non-UTF-8 summary.json in one run dir must NOT crash rescore_suite: the
+    bad file degrades fail-soft (counted in non_fatal_failures, skipped), and the
+    other run dir still scores (CR-01 / F-08)."""
+
+    suite = load_suite(_bootstrap_bench(tmp_path))
+
+    # Fabricate a second run dir whose summary.json is present but non-UTF-8.
+    bad_dir = tmp_path / "runs" / "badutf8"
+    bad_dir.mkdir(parents=True)
+    trial_record_path(bad_dir).write_bytes(b"\xff\xfe\x00bad")
+
+    summary = rescore_suite(suite=suite, options=RescoreOptions())
+
+    # The pass completed (did not crash) over both run dirs.
+    assert summary.total == 2
+    # The healthy run dir still scored.
+    assert summary.succeeded == 1
+    # The non-UTF-8 file degraded to an empty record -> skipped, and the
+    # swallowed UnicodeDecodeError was counted.
+    assert summary.skipped_no_summary == 1
+    assert summary.non_fatal_failures == 1
+
+
 def test_rescore_skips_failed_runs(tmp_path: Path) -> None:
     suite_yaml = _bootstrap_bench(tmp_path)
     suite = load_suite(suite_yaml)
