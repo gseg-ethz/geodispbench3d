@@ -216,22 +216,26 @@ def test_cli_rescore_emits_non_fatal_failures_line(
 
     from geodispbench3d import cli
 
-    suite = load_suite(_bootstrap_bench(tmp_path))
+    suite_path = _bootstrap_bench(tmp_path)
     run_dir = tmp_path / "runs" / "abcdef123456"
     record_path = trial_record_path(run_dir)
     record = load_trial_record(record_path)
     record["rescore_log"] = {"unexpectedly": "a-dict"}
     write_trial_record(record_path, record)
 
+    # _cmd_rescore is now its own subcommand entry: it runs the shared prelude
+    # (load_suite + results sink) off args, so we hand it argv-shaped args.
     args = argparse.Namespace(
+        suite=str(suite_path),
+        log_level="INFO",
+        traceback=False,
         max_trials=None,
         reuse_parser_options=False,
         use_prediction_cache=False,
         pass_id=None,
     )
-    logger = logging.getLogger("geodispbench3d.cli")
     with caplog.at_level(logging.INFO, logger="geodispbench3d.cli"):
-        cli._cmd_rescore(args, suite, None, logger)
+        cli._cmd_rescore(args)
 
     assert any(
         "non-fatal failures" in r.getMessage() and "1" in r.getMessage() for r in caplog.records

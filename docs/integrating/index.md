@@ -23,8 +23,8 @@ on purpose.
 | A Python adapter whose constructor needs *more* (parsed config tree, models loaded) | `factory` | [Factory](factory.md) |
 
 If unsure, start with `cli`. Subprocess isolation is cheap, the CLI adapter
-already handles hashed run-dirs, presence-only flags, and stdout/JSON output
-parsing. Move to `python_callable` only if startup cost (importing your
+already handles hashed run-dirs, presence-only flags, and glob-based output
+collection. Move to `python_callable` only if startup cost (importing your
 tool every trial) is dominating runtime.
 
 ## The minimum viable integration
@@ -42,16 +42,17 @@ invocation:
 hyperparameters:
   - { name: alpha, type: range, value_type: float, lower: 0.0, upper: 1.0 }
 outputs:
-  from: stdout_json
+  from: glob                  # the blessed output-collection mode
+  predictions_glob: "*.json"  # run-dir-relative glob for the tool's output
 ```
 
-If your tool prints a JSON line on stdout's final line of the form
-`{"run_dir": "...", "scalar_metrics": {...}}`, you don't even need an output
-parser — the metric callables can be configured to read the trial's reported
-scalars directly.
+`outputs.from: glob` is the single blessed output-collection mode (and the
+default when `from:` is unset). The older `stdout_json` mode is **deprecated** —
+setting it explicitly now raises at load time. See
+[Locating outputs](cli-tool.md#locating-outputs) for the migration.
 
-Most real tools, though, produce dense displacement fields and need a parser
-to sample at GT points. See [Output parsers](output-parsers.md).
+Most real tools produce dense displacement fields and need a parser to sample at
+GT points. See [Output parsers](output-parsers.md).
 
 ## What lives where
 

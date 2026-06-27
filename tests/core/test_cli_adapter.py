@@ -7,7 +7,11 @@ static_params merging.
 
 from __future__ import annotations
 
+import shutil
+import stat
 from pathlib import Path
+
+import pytest
 
 from geodispbench3d.tool import (
     CliInvocationSpec,
@@ -111,3 +115,32 @@ def test_hashed_run_dir_appends_arg_to_argv(tmp_path: Path) -> None:
     argv = adapter._build_argv(request, run_dir=run_dir)
     assert "--results_dir" in argv
     assert str(run_dir) in argv
+
+
+@pytest.mark.skipif(shutil.which("bash") is None, reason="bash required for the stub executable")
+def test_real_subprocess_success_collects_glob_predictions(tmp_path: Path) -> None:
+    """End-to-end over a REAL subprocess: a stub that writes a predictions file
+    into the injected hashed run dir yields success with the glob collected."""
+
+    stub = tmp_path / "writer.sh"
+    stub.write_text(
+        "#!/usr/bin/env bash\n"
+        "set -u\n"
+        'out=""\n'
+        "while [ $# -gt 0 ]; do\n"
+        '  case "$1" in --out) out="$2"; shift 2;; *) shift;; esac\n'
+        "done\n"
+        'echo "{}" > "$out/result.pred"\n'
+    )
+    stub.chmod(stub.stat().st_mode | stat.S_IXUSR | stat.S_IXGRP | stat.S_IXOTH)
+
+    adapter = CliToolAdapter(
+        invocation=CliInvocationSpec(entry=str(stub), style="argparse"),
+        hashed_run_dir=HashedRunDirSpec(root=tmp_path / "runs", arg_name="--out"),
+        predictions_glob="*.pred",
+    )
+    result = adapter.run_trial(TrialRequest(parameters={"alpha": 0.5}))
+
+    assert result.success is True
+    assert len(result.outputs.predictions) == 1
+    assert result.outputs.predictions[0].name == "result.pred"

@@ -6,12 +6,19 @@ verbs for this:
 
 | Need | Use |
 |---|---|
-| You changed a metric (or the sampling radius) and want to update the parquet without re-running the tool. | `geodispbench3d run <suite.yaml> --rescore` |
+| You changed a metric (or the sampling radius) and want to update the parquet without re-running the tool. | `geodispbench3d rescore <suite.yaml>` |
 | You have cached predictions from many tools and want to compare them against the same metrics on the same GT. | `geodispbench3d analyze <analysis.yaml>` |
 
 Both share the underlying machinery, and both write to the same parquet
 schema (with a `mode:` column to discriminate `sweep` / `rescore` /
 `analyze` rows), so the dashboard works for everything.
+
+> **Migration note (pre-public CLI break).** Rescore used to be a `--rescore`
+> flag on the `run` subcommand. It is now its own first-class `rescore`
+> subcommand. The old `--rescore` flag is gone, and the rescore-only flags
+> (`--reuse-parser-options`, `--use-prediction-cache`, `--pass-id`) are rejected
+> on `run` — pass them to `rescore` instead. Update any scripts that drove
+> rescoring through `run` to call `geodispbench3d rescore <suite.yaml>`.
 
 ## The three phases of a trial
 
@@ -30,10 +37,10 @@ prediction is cached at
 `<predictions_root>/<tool_id>/<dataset_id>/<case>/<run_hash>.json`.
 The two new verbs reuse those artifacts.
 
-## `--rescore`: skip phase 1, optionally skip phase 2
+## `rescore`: skip phase 1, optionally skip phase 2
 
 ```bash
-geodispbench3d run benchmarks/suites/iof3d_mattertal.yaml --rescore
+geodispbench3d rescore benchmarks/suites/iof3d_mattertal.yaml
 ```
 
 Walks every run directory under the suite's `results.run_dir_root`
@@ -43,7 +50,7 @@ The tool is never invoked.
 
 ### Flags
 
-`--rescore` alone uses the suite's **current** parser options, so a
+`rescore` with no extra flags uses the suite's **current** parser options, so a
 freshly-edited `sample_radius_m` takes effect immediately. Pair with:
 
 `--reuse-parser-options`
@@ -75,7 +82,7 @@ You can read these later to see how a run's metrics evolved.
 ```bash
 # 1. Edit the suite YAML's output_parser.options.sample_radius_m,
 #    or the parser options in the tool YAML, then:
-geodispbench3d run benchmarks/suites/iof3d_mattertal.yaml --rescore \
+geodispbench3d rescore benchmarks/suites/iof3d_mattertal.yaml \
     --pass-id radius-25
 ```
 
@@ -88,7 +95,7 @@ The parquet now contains `mode=sweep` rows (original) plus
 ```bash
 # 1. Edit metrics.yaml to add the new metric.
 # 2. Re-score using cached predictions, no parser invocation:
-geodispbench3d run benchmarks/suites/iof3d_mattertal.yaml --rescore \
+geodispbench3d rescore benchmarks/suites/iof3d_mattertal.yaml \
     --reuse-parser-options --use-prediction-cache --pass-id new-metric
 ```
 
@@ -135,9 +142,9 @@ pass_id: iof3d-vs-f2s3-2026-05  # optional; auto-generated otherwise
 <run_hash>.json`; each segment of `filter:` is optional, with `None`
 matching anything.
 
-### When to use `analyze` vs `--rescore`
+### When to use `analyze` vs `rescore`
 
-- **`--rescore`** when the tool's outputs still exist and you want to
+- **`rescore`** when the tool's outputs still exist and you want to
   re-run the parser (e.g. with a larger sampling radius). The parser
   is tool-specific.
 - **`analyze`** when the predictions are all you have, or when you
@@ -187,7 +194,7 @@ Each file:
 ```
 
 The cache is populated automatically by every `run` and updated by
-`--rescore` (when phase 2 runs). The default location is
+the `rescore` pass (when phase 2 runs). The default location is
 `<suite-dir>/outputs/predictions/`; override with
 `results.predictions_root:` in the suite YAML if you want it elsewhere
 (for example, on slower-but-larger storage so cleaning up run dirs is
