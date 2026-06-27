@@ -48,17 +48,34 @@ dashboard = [
     "altair ~= 5.4",
     "duckdb ~= 1.4",
 ]
-# iof3D adapter: imports iof3D at module level, so installing this extra
-# pulls iof3D's full pipeline stack (torch, ptlflow, opencv, ...) transitively.
-iof3d = [
-    "iof3D ~= 0.1",
-    "pchandler",
-    "pc2img",
-]
-# F2S3 adapter: today drives F2S3 via subprocess against a separate conda env,
-# but F2S3 is also installable as a Python library (gseg-ethz/F2S3_pc_deformation_monitoring).
-# Listed for symmetry; the adapter itself works without it (subprocess invocation).
-f2s3 = []
+# iof3D adapter: DISABLED for the public release until iof3D publishes (PKG-01,
+# D-03/D-04). iof3D and pc2img are not yet on public PyPI, so an active extra
+# would make every install path that touches it unresolvable. The extra is
+# commented out (not set to []): `pip install geodispbench3d[iof3d]` then
+# installs the base package and pip emits a WARNING that the requested extra is
+# not provided (it does NOT hard-error), and the private iof3D/pc2img deps never
+# enter resolution. An empty [] would instead silently succeed and falsely
+# advertise an installable-but-empty extra. The geodispbench3d_iof3d package
+# still ships in the wheel (D-01), dormant via the PEP 562 import guard.
+# iof3d = [
+#     "iof3D ~= 0.1",
+#     "pchandler",
+#     "pc2img",
+# ]
+# F2S3 adapter: drives F2S3 via subprocess, but its output parser imports
+# pchandler (data_io.Csv, filters.SphereFilter, PointCloudData). With the
+# [iof3d] extra disabled, this is the only path that carries pchandler, so it
+# is pinned here (D-05/D-06, PKG-02). pchandler 2.1.0 is first-party (gseg-ethz)
+# and symbol/API compatibility is VERIFIED per D-07 (research Focus 2): all four
+# symbol paths used by this repo — pchandler.PointCloudData, pchandler.data_io.Csv,
+# pchandler.filters.SphereFilter, pchandler.geometry.spherical.Angle — plus
+# Csv.load kwargs resolve at their 2.1 paths in the 2.1.0 wheel, so no import
+# adaptation is needed. Per the user override of session-decision-2, the clean
+# public `pip install '.[f2s3]'` resolution + parser-import smoke is PROVEN
+# in-phase (04-02 Task 3 verify, throwaway venv); only the full behavioral
+# `pytest tests/f2s3` run against installed pchandler==2.1.0 still defers to the
+# Phase 5 CI f2s3 job (it needs the separate f2s3-dev312 binary env).
+f2s3 = ["pchandler ~= 2.1"]
 dev = [
     "ruff ~= 0.15",
     "pyright ~= 1.1",
