@@ -5,8 +5,8 @@ milestone_name: milestone
 current_phase: 3
 current_phase_name: CLI Hardening
 status: "Phase 2 shipped — PR #2"
-stopped_at: Completed 02-03-PLAN.md
-last_updated: "2026-06-27T10:20:46.440Z"
+stopped_at: Phase 3 context gathered
+last_updated: "2026-06-27T11:33:47.893Z"
 last_activity: 2026-06-27
 progress:
   total_phases: 5
@@ -121,6 +121,6 @@ yet.
 
 ## Session Continuity
 
-Last session: 2026-06-27T09:35:52.802Z
-Stopped at: Completed 02-03-PLAN.md
-Resume file: None
+Last session: 2026-06-27T11:33:47.878Z
+Stopped at: Phase 3 context gathered
+Resume file: .planning/phases/03-cli-hardening/03-CONTEXT.md
