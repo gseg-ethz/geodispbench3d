@@ -32,7 +32,9 @@ findings:
   warning: 2
   info: 2
   total: 5
-status: issues_found
+status: resolved
+resolved: 2026-06-27T00:00:00Z
+resolution: All 5 findings fixed before phase verification (commits 06d95c7 CR-01, ec7cbeb WR-01, 4eb1754 WR-02, 9a7f0fe IN-01/IN-02). Full suite 83 passed; ruff/format/pyright-gate green.
 ---
 
 # Phase 2: Code Review Report
