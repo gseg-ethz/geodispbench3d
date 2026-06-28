@@ -60,12 +60,12 @@ def test_requires_python_is_312_only() -> None:
 
 def test_no_python_311_classifier() -> None:
     classifiers = set(_pyproject()["project"]["classifiers"])
-    assert (
-        "Programming Language :: Python :: 3.11" not in classifiers
-    ), "3.11 classifier must be absent (package is 3.12-only)"
-    assert (
-        "Programming Language :: Python :: 3.12" in classifiers
-    ), "3.12 classifier must be present"
+    assert "Programming Language :: Python :: 3.11" not in classifiers, (
+        "3.11 classifier must be absent (package is 3.12-only)"
+    )
+    assert "Programming Language :: Python :: 3.12" in classifiers, (
+        "3.12 classifier must be present"
+    )
 
 
 def test_ruff_target_version_is_py312() -> None:
