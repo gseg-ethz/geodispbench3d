@@ -1,6 +1,10 @@
 name: CI
+# ^ load-bearing interface string: release-please.yml keys off
+#   workflow_run.workflows: [CI]. Do NOT rename (05-RESEARCH Pitfall 2).
 
-on:
+# "on" is quoted so PyYAML (YAML 1.1 boolean rules) does not coerce the key to
+# the boolean True (review MEDIUM 05-03).
+"on":
   pull_request:
     branches: [main, develop]
   push:
@@ -9,23 +13,37 @@ on:
 permissions:
   contents: read
 
+# Topology (D-02 / D-03-superseded-3.12-only / D-07):
+#   lint  ‖  test (matrix: core+f2s3, 3.12)      <- run in parallel, no needs chain
+#   build  needs: [test]                          <- gates behind the matrix
+#   docs   (independent; blocking-on-PR, NOT a required_status_check)
+# Every `uses:` is SHA-pinned; pins sourced from 05-RESEARCH Standard Stack.
+#
+# Rendered job-name interface contract (char-for-char == the four
+# required_status_checks contexts in .github/rulesets/protect-{main,develop}.json;
+# machine-checked by .github/scripts/check_ci_ruleset_contexts.py):
+#   Lint (ruff + pyright)
+#   Test (core, 3.12)
+#   Test (f2s3, 3.12)
+#   Build wheel + install smoke
+
 jobs:
   lint:
     name: Lint (ruff + pyright)
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@93cb6efe18208431cddfb8368fd83d5badbf9bfd  # v5.0.1
 
-      - uses: actions/setup-python@v5
+      - uses: actions/setup-python@a309ff8b426b58ec0e2a45f0f869d46889d02405  # v6.2.0
         with:
           python-version: "3.12"
-          cache: pip
-          cache-dependency-path: pyproject.toml
 
-      - name: Install lint deps
-        # ruff and pyright are pinned so CI matches the pre-commit config;
-        # no project install needed for either.
-        run: pip install ruff==0.15.12 pyright==1.1.392
+      - name: Install project + lint/type tooling
+        # Install .[f2s3,dev]: pchandler is public, so the geodispbench3d_f2s3
+        # adapter's imports resolve and pyright type-checks it for real. ruff +
+        # pyright come from the dev extra. The private iof3D plugin is excluded
+        # in pyrightconfig.json (D-01a), so the gate is a genuine 0-error run.
+        run: pip install -e ".[f2s3,dev]"
 
       - name: ruff check
         run: ruff check .
@@ -33,70 +51,90 @@ jobs:
       - name: ruff format --check
         run: ruff format --check .
 
-      - name: Install project for pyright
-        # Pyright resolves third-party imports against the installed
-        # environment, so it needs the framework wheel + dev tools.
-        # Tool extras (iof3d, f2s3) are intentionally omitted here so
-        # the lint job stays fast; per-extra typing is exercised by the
-        # matching test job below.
-        run: pip install -e .[dev]
-
-      - name: pyright
+      - name: pyright (scoped, genuine 0-error)
         run: pyright
 
+      - name: Provision actionlint (pinned + checksum-verified)
+        # Supply-chain inventory (T-05-15 / review HIGH 05-05): actionlint is NOT
+        # in the env or the dev extra, so it is fetched here from a pinned release
+        # and its SHA256 verified against a hardcoded digest BEFORE execution
+        # (fail closed on mismatch). No third-party action is trusted.
+        #   actionlint 1.7.7  asset actionlint_1.7.7_linux_amd64.tar.gz
+        #   sha256 023070a287cd8cccd71515fedc843f1985bf96c436b7effaecce67290e7e0757
+        run: |
+          set -euo pipefail
+          ACTIONLINT_VERSION=1.7.7
+          ACTIONLINT_SHA256=023070a287cd8cccd71515fedc843f1985bf96c436b7effaecce67290e7e0757
+          TARBALL="actionlint_${ACTIONLINT_VERSION}_linux_amd64.tar.gz"
+          URL="https://github.com/rhysd/actionlint/releases/download/v${ACTIONLINT_VERSION}/${TARBALL}"
+          curl --fail --location --silent --show-error --output "${TARBALL}" "${URL}"
+          echo "${ACTIONLINT_SHA256}  ${TARBALL}" | sha256sum --check --status
+          tar -xzf "${TARBALL}" actionlint
+          ./actionlint -version
+
+      - name: actionlint (lint all workflows)
+        run: ./actionlint
+
+      - name: Publish-gate guard
+        # Asserts publish mechanisms live only in the two publish workflows.
+        run: python .github/scripts/check_publish_gate.py
+
+      - name: CI ↔ ruleset context reconciliation
+        # Asserts the rendered ci.yml job names == the ruleset required_status_checks
+        # contexts (catches one-character drift in-phase, not at ship-enablement).
+        run: python .github/scripts/check_ci_ruleset_contexts.py
+
   test:
-    name: Test (${{ matrix.job.name }})
-    needs: [lint]
+    name: Test (${{ matrix.suite }}, ${{ matrix.python }})
+    # No needs: lint and test run in parallel (D-02) so a lint failure cannot
+    # mask a test regression (T-05-11).
     runs-on: ubuntu-latest
     strategy:
       fail-fast: false
       matrix:
-        job:
-          # Framework wheel only, no tool extras. Guarantees the bench
-          # works without iof3D / pchandler / pc2img.
-          - { name: core,  extra: ".[dev]"        , enabled: "true" }
-          # iof3D adapter. Disabled until iof3D is published on a
-          # reachable index; flip `enabled` to "true" then.
-          - { name: iof3d, extra: ".[iof3d,dev]"  , enabled: "false" }
-          # F2S3 adapter. Pure-Python; the binary itself is not
-          # required by the parser-shape tests scaffolded here.
-          - { name: f2s3,  extra: ".[f2s3,dev]"   , enabled: "true" }
+        include:
+          # Framework-only: proves the bench works without any tool extra.
+          - { suite: core, python: "3.12", extras: "dev" }
+          # F2S3 adapter — PARSER-ONLY (no F2S3 binary; tests/f2s3 exercises the
+          # output parser, not end-to-end execution). 3.12-only: pchandler 2.1.0
+          # is >=3.12,<3.13, so this cannot run on 3.11. The dormant iof3d slot
+          # is intentionally omitted.
+          - { suite: f2s3, python: "3.12", extras: "f2s3,dev" }
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@93cb6efe18208431cddfb8368fd83d5badbf9bfd  # v5.0.1
 
-      - uses: actions/setup-python@v5
-        if: matrix.job.enabled == 'true'
+      - uses: ./.github/actions/setup-python-deps
         with:
-          python-version: "3.12"
-          cache: pip
-          cache-dependency-path: pyproject.toml
-
-      - name: Install
-        if: matrix.job.enabled == 'true'
-        run: pip install -e "${{ matrix.job.extra }}"
+          python-version: ${{ matrix.python }}
+          extras: ${{ matrix.extras }}
 
       - name: pytest
-        if: matrix.job.enabled == 'true'
-        run: pytest tests/${{ matrix.job.name }} -v
-
-      - name: Disabled
-        if: matrix.job.enabled != 'true'
-        run: echo "Job ${{ matrix.job.name }} is disabled; flip the matrix flag to enable."
+        run: pytest tests/${{ matrix.suite }} -v
 
   build:
     name: Build wheel + install smoke
     needs: [test]
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@93cb6efe18208431cddfb8368fd83d5badbf9bfd  # v5.0.1
         with:
-          # setuptools_scm reads tags to derive the version.
+          # setuptools_scm derives the version from tags; full history + tags
+          # are required or the wheel version falls back wrong (Pitfall 3).
           fetch-depth: 0
           fetch-tags: true
 
-      - uses: actions/setup-python@v5
-        with:
-          python-version: "3.12"
+      - name: Free disk space for the install smoke
+        # ax-platform pulls botorch -> torch + the NVIDIA CUDA wheel stack
+        # (several GB). Installing that whole tree into the fresh smoke venv on
+        # top of this job's own deps exhausts the ~14 GB runner disk (Errno 28,
+        # No space left on device). Reclaim large preinstalled toolchains we do
+        # not use to create headroom (Python under /opt/hostedtoolcache/Python is
+        # left untouched). Review 05-06.
+        run: |
+          sudo rm -rf /usr/local/lib/android /usr/share/dotnet /opt/ghc /opt/hostedtoolcache/CodeQL
+          df -h /
+
+      - uses: ./.github/actions/setup-python-deps
 
       - name: Install build tooling
         run: pip install build twine
@@ -113,13 +151,31 @@ jobs:
         run: |
           python -m venv /tmp/smoke-env
           /tmp/smoke-env/bin/pip install --upgrade pip
-          /tmp/smoke-env/bin/pip install dist/*.whl
+          # --no-cache-dir: don't retain the multi-GB torch/CUDA wheels in
+          # ~/.cache/pip after install — they would double disk use (review 05-06).
+          /tmp/smoke-env/bin/pip install --no-cache-dir dist/*.whl
           /tmp/smoke-env/bin/python -c "import geodispbench3d; print(geodispbench3d.__name__)"
           /tmp/smoke-env/bin/geodispbench3d --help
 
       - name: Upload distributions
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a  # v7.0.1
         with:
           name: dist
           path: dist/
           retention-days: 7
+
+  docs:
+    name: Docs build
+    # Independent (not in any needs:): blocking-on-PR so doc regressions surface,
+    # but deliberately NOT a required_status_check context (RTD activates
+    # post-public; the ruleset gate excludes this job).
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@93cb6efe18208431cddfb8368fd83d5badbf9bfd  # v5.0.1
+
+      - uses: ./.github/actions/setup-python-deps
+        with:
+          extras: docs
+
+      - name: Sphinx build (warnings-as-errors)
+        run: sphinx-build -W --keep-going -b html docs/source docs/_build/html

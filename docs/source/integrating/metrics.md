@@ -12,7 +12,7 @@ Both kinds dispatch the same way — by importlib resolving a
 `package.module:function` reference and calling it with whichever inputs
 the metric declares it `needs:`.
 
-Metrics YAMLs live in [`benchmarks/metrics/`](../../benchmarks/metrics/).
+Metrics YAMLs live in [`benchmarks/metrics/`](https://github.com/gseg-ethz/geodispbench3d/tree/main/benchmarks/metrics/).
 
 ## Anatomy
 
@@ -53,7 +53,7 @@ metric (it doesn't care about predictions or GT).
 ## Built-in metrics
 
 Defined in
-[`geodispbench3d/metrics/builtins.py`](../../src/geodispbench3d/metrics/builtins.py):
+[`geodispbench3d/metrics/builtins.py`](https://github.com/gseg-ethz/geodispbench3d/blob/main/src/geodispbench3d/metrics/builtins.py):
 
 | Metric | Returns | Notes |
 |---|---|---|
@@ -117,7 +117,7 @@ analysis.
 The whole point of metrics being a separate file is that you wire iof3D
 and F2S3 (and your tool) to the **same** metrics YAML. Both pre-built
 suites point at
-[`benchmarks/metrics/pointing_error.yaml`](../../benchmarks/metrics/pointing_error.yaml),
+[`benchmarks/metrics/pointing_error.yaml`](https://github.com/gseg-ethz/geodispbench3d/blob/main/benchmarks/metrics/pointing_error.yaml),
 so cross-tool comparisons read identically aggregated rows from the
 parquet.
 

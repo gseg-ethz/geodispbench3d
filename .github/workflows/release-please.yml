@@ -1,18 +1,16 @@
 name: release-please
 
-# Maintains a release PR against main that, when merged, cuts a new
-# version and tags it. Runs only on push to main; release-please is
-# meaningless on PRs or feature branches.
+# Cuts versioned releases off a protected main. Triggered AFTER CI succeeds
+# (workflow_run) rather than on push, and authenticated with a short-lived
+# gseg-ethz GitHub App token instead of GITHUB_TOKEN / a PAT -- GITHUB_TOKEN
+# pushes cannot satisfy required checks on a protected branch (D-05).
 #
-# Note on tokens: by default release-please uses GITHUB_TOKEN, whose
-# pushes don't trigger downstream workflows. CI on the release PR will
-# therefore not run unless a personal access token is provided as
-# RELEASE_PLEASE_TOKEN. Add that secret if you need CI to gate the
-# release PR; otherwise the GITHUB_TOKEN path is fine for cutting
-# releases of trusted commits.
-
-on:
-  push:
+# The "on" key is quoted so PyYAML does not coerce it to the boolean True; the
+# workflows list MUST match ci.yml `name: CI` exactly (review MEDIUM 05-03).
+"on":
+  workflow_run:
+    workflows: [CI]
+    types: [completed]
     branches: [main]
 
 permissions:
@@ -22,16 +20,45 @@ permissions:
 
 jobs:
   release-please:
+    # Only act on a green CI run (D-05 / T-05-05): never cut from a failed build.
+    if: ${{ github.event.workflow_run.conclusion == 'success' }}
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - id: app-token
+        uses: actions/create-github-app-token@bcd2ba49218906704ab6c1aa796996da409d3eb1  # v3.2.0
+        with:
+          app-id: ${{ secrets.APP_ID }}
+          private-key: ${{ secrets.APP_PRIVATE_KEY }}
+
+      - uses: actions/checkout@93cb6efe18208431cddfb8368fd83d5badbf9bfd  # v5.0.1
         with:
           fetch-depth: 0
           fetch-tags: true
+          token: ${{ steps.app-token.outputs.token }}
 
-      - uses: googleapis/release-please-action@v4
+      - uses: googleapis/release-please-action@45996ed1f6d02564a971a2fa1b5860e934307cf7  # v5.0.0
         id: release
         with:
-          token: ${{ secrets.RELEASE_PLEASE_TOKEN || secrets.GITHUB_TOKEN }}
+          token: ${{ steps.app-token.outputs.token }}
           config-file: release-please-config.json
           manifest-file: .release-please-manifest.json
+
+      - name: Move floating major/minor tags
+        # Convenience aliases (vX and vX.Y) that always point at the latest
+        # release on that line. This force-push of the floating refs is the
+        # ONLY force-push in the workflow and never touches the immutable
+        # vX.Y.Z release tag release-please created.
+        #
+        # Tag-protection caveat: if a ruleset later protects `v*` tags, the
+        # gseg-ethz App must be a bypass actor for that ruleset, or this step
+        # must be disabled -- otherwise the force-push of vX / vX.Y is rejected.
+        if: ${{ steps.release.outputs.release_created == 'true' }}
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          major="v${{ steps.release.outputs.major }}"
+          minor="v${{ steps.release.outputs.major }}.${{ steps.release.outputs.minor }}"
+          git tag -f "$major"
+          git tag -f "$minor"
+          git push origin --force "refs/tags/$major"
+          git push origin --force "refs/tags/$minor"

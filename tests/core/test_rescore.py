@@ -150,8 +150,10 @@ def test_rescore_default_options(tmp_path: Path) -> None:
 
 def test_rescore_with_prediction_cache_hit(tmp_path: Path) -> None:
     suite = load_suite(_bootstrap_bench(tmp_path))
+    predictions_root = suite.results.predictions_root
+    assert predictions_root is not None
     write_prediction(
-        suite.results.predictions_root,
+        predictions_root,
         tool_id="stub-tool",
         dataset_id="stub-dataset",
         case="only-case",

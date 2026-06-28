@@ -179,7 +179,7 @@ passes.
 
 Each file:
 
-```json
+```text
 {
   "schema_version": 1,
   "prediction": { "per_point": [...], "source": {...} },

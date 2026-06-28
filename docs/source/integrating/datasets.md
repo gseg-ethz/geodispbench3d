@@ -5,7 +5,7 @@ A **dataset** is a list of evaluable cases. Each case has zero or more
 Datasets are tool-agnostic: the same dataset YAML serves any tool that
 operates on the same scans against the same GT.
 
-Dataset YAMLs live in [`benchmarks/datasets/`](../../benchmarks/datasets/).
+Dataset YAMLs live in [`benchmarks/datasets/`](https://github.com/gseg-ethz/geodispbench3d/tree/main/benchmarks/datasets/).
 
 ## Anatomy
 
@@ -127,7 +127,7 @@ filter on in the dashboard.
 
 ## Where dataset YAMLs live
 
-Put your dataset YAML in [`benchmarks/datasets/`](../../benchmarks/datasets/)
+Put your dataset YAML in [`benchmarks/datasets/`](https://github.com/gseg-ethz/geodispbench3d/tree/main/benchmarks/datasets/)
 unless it's specific to one tool. Tool-specific dataset YAMLs (e.g.
 F2S3's, which embeds the PRCS PLY paths in its `scans:` list because the
 F2S3 CLI takes them as args) live in the same directory but with a
