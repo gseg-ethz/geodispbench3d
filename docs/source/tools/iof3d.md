@@ -2,7 +2,7 @@
 
 iof3D is the optical-flow-on-point-clouds pipeline this repo originated from.
 The bench wiring lives in
-[`src/geodispbench3d_iof3d/`](../../src/geodispbench3d_iof3d/).
+[`src/geodispbench3d_iof3d/`](https://github.com/gseg-ethz/geodispbench3d/tree/main/src/geodispbench3d_iof3d/).
 
 ## Run the default suite
 
@@ -19,17 +19,17 @@ tool YAML, minimizing wallclock runtime. Outputs accumulate at
 
 | Component | File |
 |---|---|
-| Tool YAML  | [`src/geodispbench3d_iof3d/conf/tool/iof3d.yaml`](../../src/geodispbench3d_iof3d/conf/tool/iof3d.yaml) |
-| Dataset    | [`benchmarks/datasets/mattertal.yaml`](../../benchmarks/datasets/mattertal.yaml) |
-| Metrics    | [`benchmarks/metrics/pointing_error.yaml`](../../benchmarks/metrics/pointing_error.yaml) |
-| Suite      | [`benchmarks/suites/iof3d_mattertal.yaml`](../../benchmarks/suites/iof3d_mattertal.yaml) |
+| Tool YAML  | [`src/geodispbench3d_iof3d/conf/tool/iof3d.yaml`](https://github.com/gseg-ethz/geodispbench3d/blob/main/src/geodispbench3d_iof3d/conf/tool/iof3d.yaml) |
+| Dataset    | [`benchmarks/datasets/mattertal.yaml`](https://github.com/gseg-ethz/geodispbench3d/blob/main/benchmarks/datasets/mattertal.yaml) |
+| Metrics    | [`benchmarks/metrics/pointing_error.yaml`](https://github.com/gseg-ethz/geodispbench3d/blob/main/benchmarks/metrics/pointing_error.yaml) |
+| Suite      | [`benchmarks/suites/iof3d_mattertal.yaml`](https://github.com/gseg-ethz/geodispbench3d/blob/main/benchmarks/suites/iof3d_mattertal.yaml) |
 
 ## How iof3D plugs in
 
 iof3D needs a fully-resolved `AppConfig` (parsed out of its own Hydra config
 tree) before its pipeline can run. The tool YAML uses `kind: factory` to
 delegate construction to
-[`geodispbench3d_iof3d.factory.build_iof3d_adapter`](../../src/geodispbench3d_iof3d/factory.py),
+[`geodispbench3d_iof3d.factory.build_iof3d_adapter`](https://github.com/gseg-ethz/geodispbench3d/blob/main/src/geodispbench3d_iof3d/factory.py),
 which:
 
 1. Loads `iof3D/conf/app/base.yaml` (referenced via `pkg://iof3D.conf/...`).
@@ -49,7 +49,7 @@ Each trial writes leaf-tile PLYs to
 displacement vector per reprojected source point.
 
 The output parser
-[`parse_iof3d_output`](../../src/geodispbench3d_iof3d/output_parser.py)
+[`parse_iof3d_output`](https://github.com/gseg-ethz/geodispbench3d/blob/main/src/geodispbench3d_iof3d/output_parser.py)
 loads all leaves with `pchandler.load_file`, merges them with
 `PointCloudData.merge`, and at each GT point samples points within
 `sample_radius_m` (default 15 m) using `SphereFilter`. The component-wise
@@ -102,7 +102,7 @@ is materialized.
 
 The previous `iof3d-ax` Hydra CLI still works **when iof3D is installed**, for
 users not yet on the suite-driven workflow. It now delegates to
-[`geodispbench3d_iof3d.cli`](../../src/geodispbench3d_iof3d/cli.py), a thin
+[`geodispbench3d_iof3d.cli`](https://github.com/gseg-ethz/geodispbench3d/blob/main/src/geodispbench3d_iof3d/cli.py), a thin
 launcher that lazily imports the hydra-decorated implementation from
 `_sweep_cli.py` and constructs the same adapter the suite path uses. Note the
 public wheel ships the iof3D adapter **dormant**: the `[iof3d]` extra is

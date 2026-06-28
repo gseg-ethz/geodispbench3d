@@ -26,9 +26,9 @@ search space** and an optional **output parser** that turns the tool's raw
 outputs into the shape metrics expect.
 
 Tool YAMLs live with the tool's bench-wiring code. iof3D's lives in
-[`src/geodispbench3d_iof3d/conf/tool/iof3d.yaml`](../src/geodispbench3d_iof3d/conf/tool/iof3d.yaml);
+[`src/geodispbench3d_iof3d/conf/tool/iof3d.yaml`](https://github.com/gseg-ethz/geodispbench3d/blob/main/src/geodispbench3d_iof3d/conf/tool/iof3d.yaml);
 F2S3's in
-[`src/geodispbench3d_f2s3/conf/tool/f2s3.yaml`](../src/geodispbench3d_f2s3/conf/tool/f2s3.yaml).
+[`src/geodispbench3d_f2s3/conf/tool/f2s3.yaml`](https://github.com/gseg-ethz/geodispbench3d/blob/main/src/geodispbench3d_f2s3/conf/tool/f2s3.yaml).
 
 ### Dataset
 
@@ -36,7 +36,7 @@ A **dataset** is a list of evaluable **cases**. Each case has one or more scans
 (typically two epochs) and ground truth. Datasets are tool-agnostic — the same
 Mattertal GT serves iof3D and F2S3 with no duplication.
 
-Dataset YAMLs live in [`benchmarks/datasets/`](../benchmarks/datasets/).
+Dataset YAMLs live in [`benchmarks/datasets/`](https://github.com/gseg-ethz/geodispbench3d/tree/main/benchmarks/datasets/).
 
 ### Metrics
 
@@ -46,7 +46,7 @@ parquet for the dashboard (`record_metrics:`). Each metric is a Python
 callable resolved by importlib via a `package.module:function` reference,
 so users can register their own metrics in their own packages.
 
-Metrics YAMLs live in [`benchmarks/metrics/`](../benchmarks/metrics/).
+Metrics YAMLs live in [`benchmarks/metrics/`](https://github.com/gseg-ethz/geodispbench3d/tree/main/benchmarks/metrics/).
 
 ### Suite
 
@@ -54,7 +54,7 @@ A **suite** is the composition: it references one tool, one dataset, one
 metrics file, and declares the search budget plus which scalar metric is the
 Ax objective.
 
-Suite YAMLs live in [`benchmarks/suites/`](../benchmarks/suites/).
+Suite YAMLs live in [`benchmarks/suites/`](https://github.com/gseg-ethz/geodispbench3d/tree/main/benchmarks/suites/).
 
 ## How a trial flows through the framework
 
