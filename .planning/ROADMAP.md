@@ -158,7 +158,7 @@ Decimal phases appear between their surrounding integers in numeric order.
 
 **CI-health evidence (flagged 2026-06-27, Phase 3 ship of PR #3):** The CI Lint job runs **raw `pyright`** (exit 1 on any error) and is **red on every run** — `develop` pushes and the Phase 1, 2, and 3 PRs all merged with it red. The standing baseline is **14 errors, 22 warnings**, dominated by unresolved plugin imports (`iof3D` / `pchandler` / `pc2img`, which CI does not install) plus a few pre-existing type-narrowing errors. Because `Test` and `Build wheel + install smoke` are gated behind Lint via `needs:`, **the entire test/build matrix is skipped on every PR** — so success criterion #1 above is currently unmet in practice. GSD phases gate locally on a pyright **baseline-diff** (no NEW errors vs `develop`), not green CI; Phase 3 was diff-clean (same 14/22). Greening this gate before the public release is the concrete work item here — options: baseline-aware pyright, scope pyright to core + exclude uninstalled-plugin imports, install the `iof3d` extra in CI, or the mypy-swap above. Decoupling `Test`/`Build` from the Lint gate is a related sub-decision so type-check policy does not silently mask test regressions.
 
-**Plans**: 3/6 plans executed
+**Plans**: 4/6 plans executed
 
 **Wave 1**
 
@@ -168,7 +168,7 @@ Decimal phases appear between their surrounding integers in numeric order.
 
 - [x] 05-02-PLAN.md — Docs scaffold: docs/source/ Sphinx+myst over the existing Markdown, minimal conf.py, .readthedocs.yaml (DOCS-01)
 - [x] 05-03-PLAN.md — Release path: publish-pypi.yml + publish-testpypi.yml (OIDC), release-please.yml rewrite (workflow_run + App token, v5), v0.2.0 seeding (CICD-03/04)
-- [ ] 05-04-PLAN.md — Branch protection: protect-main/protect-develop ruleset payloads + apply script + docs, enabled at ship (PROT-01)
+- [x] 05-04-PLAN.md — Branch protection: protect-main/protect-develop ruleset payloads + apply script + docs, enabled at ship (PROT-01)
 
 **Wave 3** *(blocked on 05-01 + 05-02)*
 
@@ -188,4 +188,4 @@ Decimal phases appear between their surrounding integers in numeric order.
 | 2. Targeted Fixes | 7/7 | Complete    | 2026-06-27 |
 | 3. CLI Hardening | 4/4 | Complete    | 2026-06-27 |
 | 4. Licensing, Metadata & Packaging | 2/2 | Complete    | 2026-06-27 |
-| 5. CI/CD & Release | 3/6 | In Progress|  |
+| 5. CI/CD & Release | 4/6 | In Progress|  |

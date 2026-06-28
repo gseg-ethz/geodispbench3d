@@ -6,14 +6,14 @@ current_phase: 05
 current_phase_name: ci-cd-release
 status: executing
 stopped_at: Completed 05-02-PLAN.md
-last_updated: "2026-06-28T07:46:55.293Z"
+last_updated: "2026-06-28T07:54:32.948Z"
 last_activity: 2026-06-28
 last_activity_desc: Phase 05 execution started
 progress:
   total_phases: 5
   completed_phases: 4
   total_plans: 21
-  completed_plans: 18
+  completed_plans: 19
   percent: 80
 ---
 
@@ -29,7 +29,7 @@ See: .planning/PROJECT.md (updated 2026-06-26)
 ## Current Position
 
 Phase: 05 (ci-cd-release) — EXECUTING
-Plan: 4 of 6
+Plan: 5 of 6
 Status: Ready to execute
 Last activity: 2026-06-28 — Phase 05 execution started
 
@@ -76,6 +76,7 @@ Progress: [░░░░░░░░░░] 0%
 | Phase 05 P01 | 12min | 3 tasks | 13 files |
 | Phase 05 P02 | 6min | 3 tasks | 12 files |
 | Phase 05 P03 | 7min | 3 tasks | 5 files |
+| Phase 05 P04 | 6min | 2 tasks | 4 files |
 
 ## Accumulated Context
 
@@ -110,6 +111,8 @@ Recent decisions affecting current work:
 - [Phase 04]: [iof3d]-unavailable README note carries no timeline; adapter framed as shipping-in-wheel-but-dormant until iof3D is public (04-01)
 - [Phase ?]: Durable v0.2.0 seed: manifest 0.1.0 + committed Release-As: 0.2.0 footer (ce1dcfc), both real git state (review HIGH 05-03)
 - [Phase 05]: Production-publish preflight (check_release_preflight.py) gates real-PyPI uploads on tag/version/draft/ancestry (T-05-13)
+- [Phase ?]: [Phase 05-04]: Branch-protection rulesets (protect-main/protect-develop) delivered as committed JSON + idempotent apply-rulesets.sh (match-by-name PUT/POST, --dry-run, write-guarding preflight); enabled at milestone-ship only, never during the phase (self-lockout). allowed_merge_methods [squash,rebase] (merge dropped); strict:false kept as a deliberate solo-maintainer tradeoff.
+- [Phase ?]: [Phase 05-04]: Ruleset contexts are a char-for-char contract; current ci.yml renders Test (core)/Test (f2s3) without ', 3.12' — Plan 05 must reconcile ci.yml matrix names (or update contexts in lockstep) and machine-verify via check_ci_ruleset_contexts.py before rulesets are enabled.
 
 ### Open Questions (surface at phase discussions)
 
@@ -141,6 +144,6 @@ yet.
 
 ## Session Continuity
 
-Last session: 2026-06-28T07:46:06.069Z
+Last session: 2026-06-28T07:53:52.937Z
 Stopped at: Completed 05-02-PLAN.md
 Resume file: None
