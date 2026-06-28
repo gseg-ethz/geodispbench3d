@@ -1,0 +1,85 @@
+name: Publish to PyPI
+
+# Trusted publishing (OIDC) to the real PyPI, triggered when a GitHub Release
+# is published (release-please cuts that Release). No stored PyPI token: the
+# publish job mints a short-lived OIDC token via id-token: write (CICD-03).
+#
+# The "on" key is quoted so PyYAML (YAML 1.1 boolean rules) does not coerce it
+# to the boolean True (review MEDIUM 05-03). Every action is SHA-pinned (D-07).
+"on":
+  release:
+    types: [published]
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    name: Build distributions
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@93cb6efe18208431cddfb8368fd83d5badbf9bfd  # v5.0.1
+        with:
+          # setuptools_scm derives the version from the release tag; full
+          # history + tags are required or the wheel version falls back wrong.
+          fetch-depth: 0
+          fetch-tags: true
+
+      - uses: actions/setup-python@a309ff8b426b58ec0e2a45f0f869d46889d02405  # v6.2.0
+        with:
+          python-version: "3.12"
+
+      - name: Install build tooling
+        run: pip install build twine
+
+      - name: Build sdist + wheel
+        run: python -m build --wheel --sdist
+
+      - name: twine check
+        run: twine check dist/*
+
+      - name: Upload distributions
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a  # v7.0.1
+        with:
+          name: dist-${{ github.run_id }}
+          path: dist/
+          retention-days: 1
+
+  publish-to-pypi:
+    name: Publish to PyPI
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: pypi
+      url: https://pypi.org/p/geodispbench3d
+    permissions:
+      id-token: write
+      attestations: write
+    steps:
+      - uses: actions/checkout@93cb6efe18208431cddfb8368fd83d5badbf9bfd  # v5.0.1
+        with:
+          # Full history is required for the preflight ancestry check
+          # (tag commit reachable from origin/main).
+          fetch-depth: 0
+          fetch-tags: true
+
+      - uses: actions/setup-python@a309ff8b426b58ec0e2a45f0f869d46889d02405  # v6.2.0
+        with:
+          python-version: "3.12"
+
+      - uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c  # v8.0.1
+        with:
+          name: dist-${{ github.run_id }}
+          path: dist/
+
+      - name: Release preflight (block bad publishes)
+        # Asserts: tag matches vX.Y.Z, every built version == tag, release is
+        # not draft/prerelease, and the tag commit is reachable from main.
+        # A non-zero exit blocks the publish step below (T-05-13).
+        run: python .github/scripts/check_release_preflight.py
+
+      - uses: pypa/gh-action-pypi-publish@cef221092ed1bacb1cc03d23a2d87d1d172e277b  # v1.14.0
+        # No repository-url -> defaults to the real PyPI. PEP 740 attestations
+        # default on (attestations: write granted above).
