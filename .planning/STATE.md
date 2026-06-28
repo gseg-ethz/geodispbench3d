@@ -6,15 +6,15 @@ current_phase: 05
 current_phase_name: ci-cd-release
 status: executing
 stopped_at: Completed 05-02-PLAN.md
-last_updated: "2026-06-28T08:08:19.365Z"
+last_updated: "2026-06-28T09:41:54.414Z"
 last_activity: 2026-06-28
 last_activity_desc: Completed 05-05-PLAN.md (CI restructure + supply-chain guards)
 progress:
   total_phases: 5
-  completed_phases: 4
+  completed_phases: 5
   total_plans: 21
-  completed_plans: 20
-  percent: 80
+  completed_plans: 21
+  percent: 100
 ---
 
 # Project State
@@ -78,6 +78,7 @@ Progress: [████████░░] 83%
 | Phase 05 P03 | 7min | 3 tasks | 5 files |
 | Phase 05 P04 | 6min | 2 tasks | 4 files |
 | Phase 05 P05 | 14min | 4 tasks | 4 files |
+| Phase 05 P06 | 54min | 3 tasks | 5 files |
 
 ## Accumulated Context
 
@@ -114,6 +115,7 @@ Recent decisions affecting current work:
 - [Phase 05]: Production-publish preflight (check_release_preflight.py) gates real-PyPI uploads on tag/version/draft/ancestry (T-05-13)
 - [Phase ?]: [Phase 05-04]: Branch-protection rulesets (protect-main/protect-develop) delivered as committed JSON + idempotent apply-rulesets.sh (match-by-name PUT/POST, --dry-run, write-guarding preflight); enabled at milestone-ship only, never during the phase (self-lockout). allowed_merge_methods [squash,rebase] (merge dropped); strict:false kept as a deliberate solo-maintainer tradeoff.
 - [Phase ?]: [Phase 05-04]: Ruleset contexts are a char-for-char contract; current ci.yml renders Test (core)/Test (f2s3) without ', 3.12' — Plan 05 must reconcile ci.yml matrix names (or update contexts in lockstep) and machine-verify via check_ci_ruleset_contexts.py before rulesets are enabled.
+- [Phase ?]: [Phase 05-06]: CI proven green on PR #6 to develop (run 28317897531, all 5 jobs); lean env surfaced 4 latent defects fixed in-phase (pyarrow core dep, Ax 1.3.x complete_trial objective-only, pchandler importorskip, build disk reclaim). CICD-01/02 Complete; CICD-03/04 wiring+0.2.0-seed proven, end-to-end deferred to ship. Repo stays private.
 
 ### Open Questions (surface at phase discussions)
 
@@ -145,6 +147,6 @@ yet.
 
 ## Session Continuity
 
-Last session: 2026-06-28T08:07:41.540Z
+Last session: 2026-06-28T09:41:08.191Z
 Stopped at: Completed 05-02-PLAN.md
 Resume file: None

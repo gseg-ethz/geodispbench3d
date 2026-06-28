@@ -22,7 +22,7 @@ Decimal phases appear between their surrounding integers in numeric order.
 - [x] **Phase 2: Targeted Fixes** - Apply audit-scoped fixes until the full test and quality-tool suite passes (completed 2026-06-27)
 - [x] **Phase 3: CLI Hardening** - Harden all three CLI surfaces; document F2S3 as the canonical CliToolAdapter example (completed 2026-06-27)
 - [x] **Phase 4: Licensing, Metadata & Packaging** - Reconcile license, drop Private classifier, untangle packaging deps; resolve open iof3d/pchandler decisions (completed 2026-06-27)
-- [ ] **Phase 5: CI/CD & Release** - Automate lint/type/test gates, wheel+sdist build, and trusted-publishing release to public PyPI
+- [x] **Phase 5: CI/CD & Release** - Automate lint/type/test gates, wheel+sdist build, and trusted-publishing release to public PyPI (completed 2026-06-28)
 
 ## Phase Details
 
@@ -158,7 +158,7 @@ Decimal phases appear between their surrounding integers in numeric order.
 
 **CI-health evidence (flagged 2026-06-27, Phase 3 ship of PR #3):** The CI Lint job runs **raw `pyright`** (exit 1 on any error) and is **red on every run** — `develop` pushes and the Phase 1, 2, and 3 PRs all merged with it red. The standing baseline is **14 errors, 22 warnings**, dominated by unresolved plugin imports (`iof3D` / `pchandler` / `pc2img`, which CI does not install) plus a few pre-existing type-narrowing errors. Because `Test` and `Build wheel + install smoke` are gated behind Lint via `needs:`, **the entire test/build matrix is skipped on every PR** — so success criterion #1 above is currently unmet in practice. GSD phases gate locally on a pyright **baseline-diff** (no NEW errors vs `develop`), not green CI; Phase 3 was diff-clean (same 14/22). Greening this gate before the public release is the concrete work item here — options: baseline-aware pyright, scope pyright to core + exclude uninstalled-plugin imports, install the `iof3d` extra in CI, or the mypy-swap above. Decoupling `Test`/`Build` from the Lint gate is a related sub-decision so type-check policy does not silently mask test regressions.
 
-**Plans**: 5/6 plans executed
+**Plans**: 6/6 plans complete
 
 **Wave 1**
 
@@ -176,7 +176,7 @@ Decimal phases appear between their surrounding integers in numeric order.
 
 **Wave 4** *(blocked on 05-03 + 05-05)*
 
-- [ ] 05-06-PLAN.md — Integration verification: real CI run green + TestPyPI OIDC dry-run + external-prereq human gate (CICD-01/02/03 proof)
+- [x] 05-06-PLAN.md — Integration verification: real CI run green + TestPyPI OIDC dry-run + external-prereq human gate (CICD-01/02/03 proof)
 
 ## Progress
 
@@ -188,4 +188,4 @@ Decimal phases appear between their surrounding integers in numeric order.
 | 2. Targeted Fixes | 7/7 | Complete    | 2026-06-27 |
 | 3. CLI Hardening | 4/4 | Complete    | 2026-06-27 |
 | 4. Licensing, Metadata & Packaging | 2/2 | Complete    | 2026-06-27 |
-| 5. CI/CD & Release | 5/6 | In Progress|  |
+| 5. CI/CD & Release | 6/6 | Complete   | 2026-06-28 |
