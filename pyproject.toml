@@ -33,7 +33,7 @@ dependencies = [
 homepage = "https://gseg.igp.ethz.ch/"
 repository = "https://github.com/gseg-ethz/geodispbench3d"
 issues = "https://github.com/gseg-ethz/geodispbench3d/issues"
-Documentation = "https://github.com/gseg-ethz/geodispbench3d/blob/main/docs/index.md"
+Documentation = "https://github.com/gseg-ethz/geodispbench3d/blob/main/docs/source/index.md"
 Changelog = "https://github.com/gseg-ethz/geodispbench3d/blob/main/CHANGELOG.md"
 
 [project.scripts]
