@@ -1,0 +1,49 @@
+# Parametrized composite: Python toolchain + pip cache + an editable install of
+# the framework with the requested extras. This is the SINGLE dependency-install
+# implementation for the CI jobs (review MEDIUM 05-05): the ci.yml test matrix,
+# build, and docs jobs MUST consume it so there is one place that wires
+# setup-python + cache + `pip install -e .[extras]`.
+#
+# Scope note: the Plan 03 publish workflows (publish-pypi.yml / publish-testpypi.yml)
+# deliberately do NOT use this composite — they use inline setup so they verify
+# independently (they predate this action in Wave 2). The "shared setup" claim is
+# therefore scoped to CI jobs only.
+#
+# Caller contract: the caller MUST `actions/checkout` BEFORE invoking this
+# composite — a local (`./.github/actions/...`) action needs the repository on
+# disk, and the editable install resolves `pyproject.toml` from the working dir.
+#
+# Action SHAs are pinned per D-07 (supply-chain). Pins sourced from
+# 05-RESEARCH.md > Standard Stack:
+#   actions/setup-python  a309ff8b426b58ec0e2a45f0f869d46889d02405  # v6.2.0
+#   actions/cache         27d5ce7f107fe9357f9df03efb73ab90386fccae  # v5.0.5
+name: Setup Python + deps (geodispbench3d)
+description: Install Python and an editable geodispbench3d with the requested extras (shared CI setup).
+
+inputs:
+  python-version:
+    description: Python version passed to actions/setup-python.
+    required: false
+    default: "3.12"
+  extras:
+    description: Comma-separated extras for the editable install, e.g. "f2s3,dev" or "docs".
+    required: false
+    default: "dev"
+
+runs:
+  using: composite
+  steps:
+    - uses: actions/setup-python@a309ff8b426b58ec0e2a45f0f869d46889d02405  # v6.2.0
+      with:
+        python-version: ${{ inputs.python-version }}
+
+    - uses: actions/cache@27d5ce7f107fe9357f9df03efb73ab90386fccae  # v5.0.5
+      with:
+        path: ~/.cache/pip
+        key: pip-${{ runner.os }}-${{ inputs.python-version }}-${{ hashFiles('pyproject.toml') }}
+        restore-keys: |
+          pip-${{ runner.os }}-${{ inputs.python-version }}-
+
+    - name: Install geodispbench3d with extras
+      shell: bash
+      run: pip install -e ".[${{ inputs.extras }}]"
