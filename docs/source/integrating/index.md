@@ -10,7 +10,7 @@ A tool integration in geodispbench3d is at most three things:
    `src/geodispbench3d_<tool>/`.
 
 The dataset, metrics, and suite YAMLs you'll use are typically already in
-[`benchmarks/`](../../benchmarks/) — datasets and metrics are tool-agnostic
+[`benchmarks/`](https://github.com/gseg-ethz/geodispbench3d/tree/main/benchmarks/) — datasets and metrics are tool-agnostic
 on purpose.
 
 ## Decision matrix: which adapter kind?
@@ -66,7 +66,7 @@ src/geodispbench3d_<tool>/        ← your peer package
 ```
 
 The peer package contains *only* tool-specific code and its tool YAML.
-Datasets, metrics, and suites belong in [`benchmarks/`](../../benchmarks/) so
+Datasets, metrics, and suites belong in [`benchmarks/`](https://github.com/gseg-ethz/geodispbench3d/tree/main/benchmarks/) so
 they can be reused across tools (e.g. comparing your tool to iof3D on the
 same Mattertal GT).
 

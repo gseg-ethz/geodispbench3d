@@ -12,6 +12,48 @@ It ships with two pre-built tool integrations:
 
 Adding a new tool is a YAML-and-glue exercise; see the integration guide below.
 
+:::{toctree}
+:hidden:
+:caption: Read me first
+:maxdepth: 1
+
+quickstart
+concepts
+rescoring-and-analysis
+:::
+
+:::{toctree}
+:hidden:
+:caption: Pre-built tools
+:maxdepth: 1
+
+tools/iof3d
+tools/f2s3
+:::
+
+:::{toctree}
+:hidden:
+:caption: Integrating your own tool
+:maxdepth: 1
+
+integrating/index
+integrating/cli-tool
+integrating/python-callable
+integrating/factory
+integrating/custom-adapter
+integrating/output-parsers
+integrating/datasets
+integrating/metrics
+:::
+
+:::{toctree}
+:hidden:
+:caption: Reference
+:maxdepth: 1
+
+reference/yaml-schemas
+:::
+
 ## Read me first
 
 - [Quickstart](quickstart.md) — run a sweep in five minutes against a pre-built tool.

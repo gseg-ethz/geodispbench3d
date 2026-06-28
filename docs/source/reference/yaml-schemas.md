@@ -1,7 +1,7 @@
 # YAML schemas cheat sheet
 
 The four YAML kinds at a glance. JSON Schema files live in
-[`src/geodispbench3d/conf/schema/`](../../src/geodispbench3d/conf/schema/)
+[`src/geodispbench3d/conf/schema/`](https://github.com/gseg-ethz/geodispbench3d/tree/main/src/geodispbench3d/conf/schema/)
 and provide the canonical validation rules.
 
 ## tool.yaml
@@ -77,7 +77,7 @@ output_parser:
   options: { <key>: <value> }
 ```
 
-See [`tool.schema.json`](../../src/geodispbench3d/conf/schema/tool.schema.json).
+See [`tool.schema.json`](https://github.com/gseg-ethz/geodispbench3d/blob/main/src/geodispbench3d/conf/schema/tool.schema.json).
 
 ## dataset.yaml
 
@@ -103,7 +103,7 @@ cases:
     metadata: { ... }                 # flows into case_meta for metrics
 ```
 
-See [`dataset.schema.json`](../../src/geodispbench3d/conf/schema/dataset.schema.json).
+See [`dataset.schema.json`](https://github.com/gseg-ethz/geodispbench3d/blob/main/src/geodispbench3d/conf/schema/dataset.schema.json).
 
 ## metrics.yaml
 
@@ -123,7 +123,7 @@ record_metrics:
     params: { ... }
 ```
 
-See [`metrics.schema.json`](../../src/geodispbench3d/conf/schema/metrics.schema.json).
+See [`metrics.schema.json`](https://github.com/gseg-ethz/geodispbench3d/blob/main/src/geodispbench3d/conf/schema/metrics.schema.json).
 
 ## suite.yaml
 
@@ -148,7 +148,7 @@ results:
   run_dir_root: <path>                # informational; tools manage their own
 ```
 
-See [`suite.schema.json`](../../src/geodispbench3d/conf/schema/suite.schema.json).
+See [`suite.schema.json`](https://github.com/gseg-ethz/geodispbench3d/blob/main/src/geodispbench3d/conf/schema/suite.schema.json).
 
 ## Path resolution rules
 
