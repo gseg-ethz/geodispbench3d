@@ -6,14 +6,14 @@ current_phase: 05
 current_phase_name: ci-cd-release
 status: executing
 stopped_at: Completed 05-02-PLAN.md
-last_updated: "2026-06-28T07:36:58.296Z"
+last_updated: "2026-06-28T07:46:55.293Z"
 last_activity: 2026-06-28
 last_activity_desc: Phase 05 execution started
 progress:
   total_phases: 5
   completed_phases: 4
   total_plans: 21
-  completed_plans: 17
+  completed_plans: 18
   percent: 80
 ---
 
@@ -29,7 +29,7 @@ See: .planning/PROJECT.md (updated 2026-06-26)
 ## Current Position
 
 Phase: 05 (ci-cd-release) — EXECUTING
-Plan: 3 of 6
+Plan: 4 of 6
 Status: Ready to execute
 Last activity: 2026-06-28 — Phase 05 execution started
 
@@ -75,6 +75,7 @@ Progress: [░░░░░░░░░░] 0%
 | Phase 04 P02 | 18min | 3 tasks | 9 files |
 | Phase 05 P01 | 12min | 3 tasks | 13 files |
 | Phase 05 P02 | 6min | 3 tasks | 12 files |
+| Phase 05 P03 | 7min | 3 tasks | 5 files |
 
 ## Accumulated Context
 
@@ -107,6 +108,8 @@ Recent decisions affecting current work:
 - [Phase ?]: Plan 04 scrub rule: docs/ migration note may NAME the removed --rescore flag in prose but reproduces no full old command-form; src/ forbids ANY --rescore token (repo-wide negative grep gate).
 - [Phase 04]: Documentation/Changelog URLs use forward-valid blob/main targets; CHANGELOG.md is created by release-please in Phase 5 (04-01)
 - [Phase 04]: [iof3d]-unavailable README note carries no timeline; adapter framed as shipping-in-wheel-but-dormant until iof3D is public (04-01)
+- [Phase ?]: Durable v0.2.0 seed: manifest 0.1.0 + committed Release-As: 0.2.0 footer (ce1dcfc), both real git state (review HIGH 05-03)
+- [Phase 05]: Production-publish preflight (check_release_preflight.py) gates real-PyPI uploads on tag/version/draft/ancestry (T-05-13)
 
 ### Open Questions (surface at phase discussions)
 
@@ -138,6 +141,6 @@ yet.
 
 ## Session Continuity
 
-Last session: 2026-06-28T07:36:58.289Z
+Last session: 2026-06-28T07:46:06.069Z
 Stopped at: Completed 05-02-PLAN.md
 Resume file: None
