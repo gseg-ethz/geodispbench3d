@@ -2,19 +2,19 @@
 gsd_state_version: 1.0
 milestone: v0.2
 milestone_name: milestone
-current_phase: 05
-current_phase_name: ci-cd-release
-status: shipped
-stopped_at: Phase 05 shipped — PR #6 (phase-05 → develop)
-last_updated: "2026-06-28T09:41:54.414Z"
+current_phase: 2
+status: Awaiting next milestone
+stopped_at: Completed 05-02-PLAN.md
+last_updated: "2026-06-28T12:13:49.520Z"
 last_activity: 2026-06-28
-last_activity_desc: Phase 05 verified PASS-WITH-DEFERRALS (CI green; CICD-03/04 gated to ship)
+last_activity_desc: Milestone v0.2 completed and archived
 progress:
   total_phases: 5
   completed_phases: 5
   total_plans: 21
   completed_plans: 21
   percent: 100
+current_phase_name: ci-cd-release
 ---
 
 # Project State
@@ -28,12 +28,10 @@ See: .planning/PROJECT.md (updated 2026-06-26)
 
 ## Current Position
 
-Phase: 05 (ci-cd-release) — VERIFIED (PASS-WITH-DEFERRALS)
-Plan: 6 of 6 complete
-Status: Phase 05 SHIPPED — PR #6 (phase-05 → develop), CI green, ready to merge into develop
-Last activity: 2026-06-28 — Phase 05 shipped via PR #6; milestone develop→main (publish) is the next deliberate step
-
-Progress: [██████████] 100%
+Phase: Milestone v0.2 complete
+Plan: —
+Status: Awaiting next milestone
+Last activity: 2026-06-28 — Milestone v0.2 completed and archived
 
 ## Performance Metrics
 
@@ -143,10 +141,15 @@ yet.
 
 | Category | Item | Status | Deferred At |
 |----------|------|--------|-------------|
-| CI-health | Green the CI Lint gate (raw `pyright` red on a standing 14-error baseline → Test/Build skipped on every PR). Options + decision tracked in ROADMAP Phase 5 open question. | Deferred → Phase 5 | 2026-06-27 (Phase 3 ship, PR #3) |
+| CI-health | Green the CI Lint gate (raw `pyright` red on a standing baseline). | ✅ Resolved in Phase 5 (genuine 0-error pyright + restructured CI, green on `main`) | 2026-06-27 → closed 2026-06-28 |
+| seed | SEED-001 interactive-timeout-watchdog [dormant] — "kill or keep waiting?" poll idea | Acknowledged & deferred at v0.2 close (lives in `.planning/seeds/`) | 2026-06-28 (v0.2 milestone close) |
 
 ## Session Continuity
 
 Last session: 2026-06-28T09:41:08.191Z
 Stopped at: Completed 05-02-PLAN.md
 Resume file: None
+
+## Operator Next Steps
+
+- Start the next milestone with /gsd-new-milestone
