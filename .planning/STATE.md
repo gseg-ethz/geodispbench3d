@@ -4,11 +4,11 @@ milestone: v0.2
 milestone_name: milestone
 current_phase: 05
 current_phase_name: ci-cd-release
-status: executing
-stopped_at: Completed 05-02-PLAN.md
+status: verified
+stopped_at: Completed 05-06-PLAN.md (phase verified)
 last_updated: "2026-06-28T09:41:54.414Z"
 last_activity: 2026-06-28
-last_activity_desc: Completed 05-05-PLAN.md (CI restructure + supply-chain guards)
+last_activity_desc: Phase 05 verified PASS-WITH-DEFERRALS (CI green; CICD-03/04 gated to ship)
 progress:
   total_phases: 5
   completed_phases: 5
@@ -28,12 +28,12 @@ See: .planning/PROJECT.md (updated 2026-06-26)
 
 ## Current Position
 
-Phase: 05 (ci-cd-release) — EXECUTING
-Plan: 6 of 6
-Status: Ready to execute (05-06 remaining)
-Last activity: 2026-06-28 — Completed 05-05-PLAN.md (CI restructure + supply-chain guards)
+Phase: 05 (ci-cd-release) — VERIFIED (PASS-WITH-DEFERRALS)
+Plan: 6 of 6 complete
+Status: Phase complete — ready for /gsd-ship (CICD-03/04 end-to-end + ruleset enable + go-public = ship-time actions)
+Last activity: 2026-06-28 — Phase 05 verified; CI green on PR #6 (run 28317897531, all 5 jobs)
 
-Progress: [████████░░] 83%
+Progress: [██████████] 100%
 
 ## Performance Metrics
 
