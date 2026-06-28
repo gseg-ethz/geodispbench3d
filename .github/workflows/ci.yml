@@ -123,6 +123,17 @@ jobs:
           fetch-depth: 0
           fetch-tags: true
 
+      - name: Free disk space for the install smoke
+        # ax-platform pulls botorch -> torch + the NVIDIA CUDA wheel stack
+        # (several GB). Installing that whole tree into the fresh smoke venv on
+        # top of this job's own deps exhausts the ~14 GB runner disk (Errno 28,
+        # No space left on device). Reclaim large preinstalled toolchains we do
+        # not use to create headroom (Python under /opt/hostedtoolcache/Python is
+        # left untouched). Review 05-06.
+        run: |
+          sudo rm -rf /usr/local/lib/android /usr/share/dotnet /opt/ghc /opt/hostedtoolcache/CodeQL
+          df -h /
+
       - uses: ./.github/actions/setup-python-deps
 
       - name: Install build tooling
@@ -140,7 +151,9 @@ jobs:
         run: |
           python -m venv /tmp/smoke-env
           /tmp/smoke-env/bin/pip install --upgrade pip
-          /tmp/smoke-env/bin/pip install dist/*.whl
+          # --no-cache-dir: don't retain the multi-GB torch/CUDA wheels in
+          # ~/.cache/pip after install — they would double disk use (review 05-06).
+          /tmp/smoke-env/bin/pip install --no-cache-dir dist/*.whl
           /tmp/smoke-env/bin/python -c "import geodispbench3d; print(geodispbench3d.__name__)"
           /tmp/smoke-env/bin/geodispbench3d --help
 
