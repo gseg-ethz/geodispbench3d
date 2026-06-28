@@ -245,7 +245,10 @@ class AxSweepRunner:
                 trial_index, parameters = _normalize_trial_data(trial_data)
                 try:
                     metrics = executor(parameters)
-                    self._ax.complete_trial(trial_index=trial_index, raw_data=metrics)
+                    self._ax.complete_trial(
+                        trial_index=trial_index,
+                        raw_data=self._objective_raw_data(metrics),
+                    )
                 except Exception as exc:  # pragma: no cover - defensive
                     self._logger.exception("Trial %s failed: %s", trial_index, exc)
                     self._ax.log_trial_failure(trial_index=trial_index)
@@ -264,6 +267,29 @@ class AxSweepRunner:
         _raise_if_failed(result)
         self._record_run_hash(result.outputs.run_dir.name)
         return dict(result.scalar_metrics)
+
+    def _objective_raw_data(self, metrics: Mapping[str, float]) -> dict[str, float]:
+        """Restrict the ``complete_trial`` payload to the registered objective.
+
+        Ax 1.3.x tightened ``complete_trial``: every metric in ``raw_data`` must
+        be registered on the experiment (its ``metric_name_to_signature``), or it
+        raises ``UserInputError`` (``Metric(s) {...} not found``). The experiment
+        is created with a single objective and no tracking metrics, so passing
+        the full scalar dict — which also carries extras like ``runtime_seconds``
+        — fails on completion (earlier Ax tolerated them as implicit tracking
+        metrics). Filtering to the objective is loss-free: the non-objective
+        scalars are persisted to the parquet store via ``on_record_rows``, and
+        ``get_best_trial``'s output is only logged, never destructured for the
+        non-objective means (review 05-06).
+
+        If the objective is absent this trial (e.g. every case NaN-dropped it),
+        the empty payload makes Ax fail the trial rather than score a phantom —
+        the same outcome the objective-less dict produced before.
+        """
+
+        if self._objective_name in metrics:
+            return {self._objective_name: metrics[self._objective_name]}
+        return {}
 
     def _resolve_best_trial(self) -> Any:
         """Return Ax's best trial, or ``None`` when no trial completed.
@@ -343,7 +369,10 @@ class AxSweepRunner:
                     )
                     total_objective_cases_finite += cases_finite
                     total_objective_cases += cases_total
-                    self._ax.complete_trial(trial_index=ax_trial_index, raw_data=aggregated)
+                    self._ax.complete_trial(
+                        trial_index=ax_trial_index,
+                        raw_data=self._objective_raw_data(aggregated),
+                    )
                     successful_trials += 1
                 except TrialExecutionError as exc:
                     # A failed adapter result (success=False): report it to Ax as
