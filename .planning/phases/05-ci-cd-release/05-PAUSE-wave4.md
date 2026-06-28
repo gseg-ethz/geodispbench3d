@@ -23,11 +23,9 @@ provisioned. Verified absent on 2026-06-28: no GitHub Environments, no repo secr
 `release-please.yml` reads `secrets.APP_ID` + `secrets.APP_PRIVATE_KEY` (the
 `gseg-release-please` App). App installed on the repo ✓ (user, 2026-06-28), but the
 App id + private key still need to exist as Actions secrets.
-- [ ] `APP_ID`           — `gseg-release-please` app id
-- [ ] `APP_PRIVATE_KEY`  — `gseg-release-please` private key PEM
-  **UNVERIFIED:** no *repo*-level secrets exist; *org*-level secrets are not readable
-  without `admin:org` scope. If these are already set as gseg-ethz **org** secrets with
-  this repo in scope, nothing more is needed. Otherwise add them (repo or org).
+- [x] `APP_ID`           — set repo-level 2026-06-28
+- [x] `APP_PRIVATE_KEY`  — set repo-level 2026-06-28
+  (org-level had nothing; registered as repo secrets. App installed on repo ✓)
 
 ### (note) Codecov — not wired in CI
 The Codecov App was installed, but `ci.yml` has **no coverage-upload step**, so Codecov
