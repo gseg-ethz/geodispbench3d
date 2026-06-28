@@ -16,6 +16,7 @@ import os
 import re
 from collections.abc import Iterable
 from pathlib import Path
+from typing import cast
 
 try:
     import streamlit as st
@@ -69,8 +70,9 @@ def _apply_filters(df: pd.DataFrame, filters: dict[str, Iterable[str]]) -> pd.Da
     filtered = df.copy()
     for column, selected in filters.items():
         if selected:
-            filtered = filtered[filtered[column].isin(selected)]
-    return filtered
+            mask = cast("pd.Series", filtered[column]).isin(list(selected))
+            filtered = filtered.loc[mask]
+    return cast("pd.DataFrame", filtered)
 
 
 def _sanitize_alias(value: str) -> str:
