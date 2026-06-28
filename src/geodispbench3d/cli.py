@@ -21,7 +21,7 @@ import argparse
 import logging
 import sys
 from pathlib import Path
-from typing import TYPE_CHECKING, TypeVar
+from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
     from collections.abc import Callable, Mapping, Sequence
@@ -33,8 +33,6 @@ if TYPE_CHECKING:
     # path is configured. Matches rescore_suite / run_with_suite's parameter.
     OnRecordRows = Callable[[Sequence[Mapping[str, Any]]], None] | None
 
-_T = TypeVar("_T")
-
 
 class _CleanExit(Exception):
     """Internal sentinel: a config-load error has already been flattened to a
@@ -42,7 +40,7 @@ class _CleanExit(Exception):
     1 without re-printing. Never escapes the module."""
 
 
-def _load_or_clean_exit(loader: Callable[..., _T], *loader_args: object, traceback: bool) -> _T:
+def _load_or_clean_exit[T](loader: Callable[..., T], *loader_args: object, traceback: bool) -> T:
     """Run a config loader, flattening loader errors to ``error: <msg>`` + exit 1.
 
     The protected region is EXACTLY the loader call (review MEDIUM): only a

@@ -14,7 +14,7 @@ from collections.abc import Callable, Mapping, Sequence
 from collections.abc import Mapping as MappingABC
 from dataclasses import asdict, dataclass
 from pathlib import Path
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING, Any, cast
 
 if TYPE_CHECKING:
     from geodispbench3d.suite.loader import SuiteConfig
@@ -652,13 +652,13 @@ def _normalize_trial_data(trial_data: Any) -> tuple[int, dict[str, Any]]:
             continue
         if hasattr(item, "trial_index") and trial_index is None:
             try:
-                trial_index = int(item.trial_index)
+                trial_index = int(cast("Any", item).trial_index)
                 continue
             except Exception:  # pragma: no cover
                 pass
         if hasattr(item, "parameters") and params is None:
             try:
-                params = dict(item.parameters)
+                params = dict(cast("Any", item).parameters)
                 continue
             except Exception:  # pragma: no cover
                 pass
