@@ -9,13 +9,30 @@ provisioned. Verified absent on 2026-06-28: no GitHub Environments, no repo secr
 ## What you must provision (external, human-only)
 
 ### 1. GitHub Environments — `gseg-ethz/geodispbench3d` → Settings → Environments
-- [ ] `pypi`   (production publish target; optional required-reviewer approval gate)
-- [ ] `testpypi` (dry-run target)
+- [x] `pypi`   (production publish target) — created 2026-06-28 via gh
+- [x] `testpypi` (dry-run target) — created 2026-06-28 via gh
+- [ ] **`pypi` required-reviewer approval gate (NixtonM) — DEFERRED to repo-go-public.**
+      Environment protection rules (required reviewers) are unavailable for *private*
+      repos on the current gseg-ethz billing plan (GitHub returns HTTP 422). The gate
+      becomes free the moment the repo is public. **At ship-time, after making the repo
+      public, run:**
+      `gh api --method PUT repos/gseg-ethz/geodispbench3d/environments/pypi --input - <<<'{"reviewers":[{"type":"User","id":49650019}]}'`
+      Until then the production publish is guarded by `check_release_preflight.py` only.
 
-### 2. Repo secrets (for release-please App token) — Settings → Secrets and variables → Actions
-- [ ] `APP_ID`           — gseg-ethz GitHub App, app id
-- [ ] `APP_PRIVATE_KEY`  — gseg-ethz GitHub App, private key PEM
-  (the App must be installed on `gseg-ethz/geodispbench3d` with contents + PRs write)
+### 2. Secrets (for release-please App token) — repo OR org level
+`release-please.yml` reads `secrets.APP_ID` + `secrets.APP_PRIVATE_KEY` (the
+`gseg-release-please` App). App installed on the repo ✓ (user, 2026-06-28), but the
+App id + private key still need to exist as Actions secrets.
+- [ ] `APP_ID`           — `gseg-release-please` app id
+- [ ] `APP_PRIVATE_KEY`  — `gseg-release-please` private key PEM
+  **UNVERIFIED:** no *repo*-level secrets exist; *org*-level secrets are not readable
+  without `admin:org` scope. If these are already set as gseg-ethz **org** secrets with
+  this repo in scope, nothing more is needed. Otherwise add them (repo or org).
+
+### (note) Codecov — not wired in CI
+The Codecov App was installed, but `ci.yml` has **no coverage-upload step**, so Codecov
+receives no data. Out of scope for publishing; add a `codecov/codecov-action` step (and
+`CODECOV_TOKEN` while the repo is private) later if coverage reporting is wanted.
 
 ### 3. PyPI / TestPyPI pending trusted publishers (OIDC, no stored token)
 Register both as **pending publishers** for project `geodispbench3d`:
