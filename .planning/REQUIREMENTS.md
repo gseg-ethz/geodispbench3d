@@ -44,10 +44,12 @@ Requirements for this milestone. Each maps to roadmap phases.
 
 ### CI/CD & Release
 
-- [ ] **CICD-01**: CI runs lint (ruff), type-check (pyright), and the full test matrix across supported Python versions (3.11/3.12)
+- [ ] **CICD-01**: CI runs lint (ruff), type-check (pyright), and the full test matrix on Python 3.12
 - [ ] **CICD-02**: CI builds wheel + sdist and validates the distribution (e.g. `twine check`)
 - [ ] **CICD-03**: A tagged release publishes to public PyPI via trusted publishing (OIDC), with no stored long-lived tokens
 - [ ] **CICD-04**: Release automation (release-please) is aligned end-to-end with the publish workflow
+- [ ] **PROT-01**: Branch protection rulesets for `main` and `develop` enforce the required CI status checks; delivered as a committed apply script, enabled at milestone-ship
+- [ ] **DOCS-01**: Sphinx + ReadTheDocs wiring: a sphinx-build over the existing Markdown passes, with `.readthedocs.yaml` mirroring the PCHandler config
 
 ## v2 Requirements
 
@@ -103,11 +105,13 @@ Which phases cover which requirements. Updated during roadmap creation.
 | CICD-02 | Phase 5 | Pending |
 | CICD-03 | Phase 5 | Pending |
 | CICD-04 | Phase 5 | Pending |
+| PROT-01 | Phase 5 | Pending |
+| DOCS-01 | Phase 5 | Pending |
 
 **Coverage:**
 
-- v1 requirements: 24 total
-- Mapped to phases: 24 (all phases)
+- v1 requirements: 26 total
+- Mapped to phases: 26 (all phases)
 - Unmapped: 0
 
 ---

@@ -146,10 +146,10 @@ Decimal phases appear between their surrounding integers in numeric order.
 
 **Goal**: An automated pipeline validates code quality on every push and publishes verified releases to public PyPI via trusted publishing
 **Depends on**: Phase 4
-**Requirements**: CICD-01, CICD-02, CICD-03, CICD-04
+**Requirements**: CICD-01, CICD-02, CICD-03, CICD-04, PROT-01, DOCS-01
 **Success Criteria** (what must be TRUE):
 
-  1. CI runs ruff (lint), pyright (type check), and the full test matrix across Python 3.11 and 3.12 on every push and pull request
+  1. CI runs ruff (lint), pyright (type check), and the full test matrix on Python 3.12 on every push and pull request
   2. CI builds wheel + sdist and the distribution passes `twine check` before any publish step can proceed
   3. A tagged release triggers OIDC trusted publishing to public PyPI — no stored long-lived tokens are used
   4. release-please is wired end-to-end so version bumps, changelog entries, and PyPI publishes flow automatically from a git tag
