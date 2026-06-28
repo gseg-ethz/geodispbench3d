@@ -80,6 +80,12 @@ def test_parser_path_resolves_without_iof3d(monkeypatch: pytest.MonkeyPatch) -> 
     # finding 9: the non-gated parser symbol imports only public pchandler, so
     # it MUST resolve even while iof3D/pc2img are blocked. Guards against a
     # regression that maps parse_iof3d_output to a gated submodule.
+    #
+    # This asserts a contract ABOUT pchandler, so it can only run where pchandler
+    # is installed. The lean `core` CI suite (.[dev]) has no pchandler — skip
+    # cleanly there; the f2s3 suite (.[f2s3,dev]) and the dev env exercise it
+    # for real (review 05-06).
+    pytest.importorskip("pchandler")
     _clear_cached_iof3d_modules(monkeypatch)
     _install_import_block(monkeypatch)
 

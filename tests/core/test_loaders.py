@@ -94,7 +94,9 @@ def test_dataset_loader(synthetic_bench: dict[str, Path]) -> None:
     ds = load_dataset(synthetic_bench["dataset"])
     assert ds.id == "synthetic"
     assert len(ds.cases) == 1
-    gt = load_ground_truth(ds.cases[0].ground_truth)
+    gt_spec = ds.cases[0].ground_truth
+    assert gt_spec is not None
+    gt = load_ground_truth(gt_spec)
     assert len(gt) == 2
     assert gt.points[0].label == "A"
 

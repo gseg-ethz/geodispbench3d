@@ -54,9 +54,10 @@ def load_tool_config(path: str | Path) -> ToolConfig:
     if not yaml_path.is_file():
         raise FileNotFoundError(f"Tool YAML not found: {yaml_path}")
 
-    raw = OmegaConf.to_container(OmegaConf.load(str(yaml_path)), resolve=True)
-    if not isinstance(raw, dict):
+    loaded = OmegaConf.to_container(OmegaConf.load(str(yaml_path)), resolve=True)
+    if not isinstance(loaded, dict):
         raise ValueError(f"Tool YAML at {yaml_path} must be a mapping")
+    raw: dict[str, Any] = {str(key): value for key, value in loaded.items()}
 
     kind = str(raw.get("kind", "cli")).lower()
     tool_id = str(raw.get("id", yaml_path.stem))

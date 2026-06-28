@@ -5,13 +5,13 @@ Run a benchmark sweep against one of the pre-built tools.
 ## Prerequisites
 
 - The `iof3d_cosicorr3d-dev312` conda env (or a wheel install with the right
-  extras) — see [`AGENTS.md`](../AGENTS.md). All Python invocations below go
+  extras) — see [`AGENTS.md`](https://github.com/gseg-ethz/geodispbench3d/blob/main/AGENTS.md). All Python invocations below go
   through `conda run -n iof3d_cosicorr3d-dev312`.
 - For F2S3: a working `f2s3` binary in the `f2s3-dev312` env.
 
 ## 1. Pick a suite
 
-Suites live in [`benchmarks/suites/`](../benchmarks/suites/):
+Suites live in [`benchmarks/suites/`](https://github.com/gseg-ethz/geodispbench3d/tree/main/benchmarks/suites/):
 
 - `iof3d_mattertal.yaml` — iof3D on the Mattertal GT, optimizing runtime.
 - `f2s3_voxel_refine.yaml` — F2S3 voxel-grid + refine sweep on Mattertal,

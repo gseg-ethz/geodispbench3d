@@ -22,7 +22,7 @@ Decimal phases appear between their surrounding integers in numeric order.
 - [x] **Phase 2: Targeted Fixes** - Apply audit-scoped fixes until the full test and quality-tool suite passes (completed 2026-06-27)
 - [x] **Phase 3: CLI Hardening** - Harden all three CLI surfaces; document F2S3 as the canonical CliToolAdapter example (completed 2026-06-27)
 - [x] **Phase 4: Licensing, Metadata & Packaging** - Reconcile license, drop Private classifier, untangle packaging deps; resolve open iof3d/pchandler decisions (completed 2026-06-27)
-- [ ] **Phase 5: CI/CD & Release** - Automate lint/type/test gates, wheel+sdist build, and trusted-publishing release to public PyPI
+- [x] **Phase 5: CI/CD & Release** - Automate lint/type/test gates, wheel+sdist build, and trusted-publishing release to public PyPI (completed 2026-06-28)
 
 ## Phase Details
 
@@ -146,10 +146,10 @@ Decimal phases appear between their surrounding integers in numeric order.
 
 **Goal**: An automated pipeline validates code quality on every push and publishes verified releases to public PyPI via trusted publishing
 **Depends on**: Phase 4
-**Requirements**: CICD-01, CICD-02, CICD-03, CICD-04
+**Requirements**: CICD-01, CICD-02, CICD-03, CICD-04, PROT-01, DOCS-01
 **Success Criteria** (what must be TRUE):
 
-  1. CI runs ruff (lint), pyright (type check), and the full test matrix across Python 3.11 and 3.12 on every push and pull request
+  1. CI runs ruff (lint), pyright (type check), and the full test matrix on Python 3.12 on every push and pull request
   2. CI builds wheel + sdist and the distribution passes `twine check` before any publish step can proceed
   3. A tagged release triggers OIDC trusted publishing to public PyPI — no stored long-lived tokens are used
   4. release-please is wired end-to-end so version bumps, changelog entries, and PyPI publishes flow automatically from a git tag
@@ -158,7 +158,25 @@ Decimal phases appear between their surrounding integers in numeric order.
 
 **CI-health evidence (flagged 2026-06-27, Phase 3 ship of PR #3):** The CI Lint job runs **raw `pyright`** (exit 1 on any error) and is **red on every run** — `develop` pushes and the Phase 1, 2, and 3 PRs all merged with it red. The standing baseline is **14 errors, 22 warnings**, dominated by unresolved plugin imports (`iof3D` / `pchandler` / `pc2img`, which CI does not install) plus a few pre-existing type-narrowing errors. Because `Test` and `Build wheel + install smoke` are gated behind Lint via `needs:`, **the entire test/build matrix is skipped on every PR** — so success criterion #1 above is currently unmet in practice. GSD phases gate locally on a pyright **baseline-diff** (no NEW errors vs `develop`), not green CI; Phase 3 was diff-clean (same 14/22). Greening this gate before the public release is the concrete work item here — options: baseline-aware pyright, scope pyright to core + exclude uninstalled-plugin imports, install the `iof3d` extra in CI, or the mypy-swap above. Decoupling `Test`/`Build` from the Lint gate is a related sub-decision so type-check policy does not silently mask test regressions.
 
-**Plans**: TBD
+**Plans**: 6/6 plans complete
+
+**Wave 1**
+
+- [x] 05-01-PLAN.md — Foundation: Python 3.12-only migration, genuine 0-error pyright (scope + fix residual core errors), and source-of-truth updates (REQUIREMENTS/ROADMAP/PROJECT/STATE; add PROT-01/DOCS-01; relabel milestone v0.2)
+
+**Wave 2** *(blocked on 05-01)*
+
+- [x] 05-02-PLAN.md — Docs scaffold: docs/source/ Sphinx+myst over the existing Markdown, minimal conf.py, .readthedocs.yaml (DOCS-01)
+- [x] 05-03-PLAN.md — Release path: publish-pypi.yml + publish-testpypi.yml (OIDC), release-please.yml rewrite (workflow_run + App token, v5), v0.2.0 seeding (CICD-03/04)
+- [x] 05-04-PLAN.md — Branch protection: protect-main/protect-develop ruleset payloads + apply script + docs, enabled at ship (PROT-01)
+
+**Wave 3** *(blocked on 05-01 + 05-02)*
+
+- [x] 05-05-PLAN.md — CI restructure: lint ‖ 3.12 test matrix, build needs:[test], docs-build job, SHA pins, setup-python-deps composite, check_publish_gate.py (CICD-01/02)
+
+**Wave 4** *(blocked on 05-03 + 05-05)*
+
+- [x] 05-06-PLAN.md — Integration verification: real CI run green + TestPyPI OIDC dry-run + external-prereq human gate (CICD-01/02/03 proof)
 
 ## Progress
 
@@ -170,4 +188,4 @@ Decimal phases appear between their surrounding integers in numeric order.
 | 2. Targeted Fixes | 7/7 | Complete    | 2026-06-27 |
 | 3. CLI Hardening | 4/4 | Complete    | 2026-06-27 |
 | 4. Licensing, Metadata & Packaging | 2/2 | Complete    | 2026-06-27 |
-| 5. CI/CD & Release | 0/? | Not started | - |
+| 5. CI/CD & Release | 6/6 | Complete   | 2026-06-28 |

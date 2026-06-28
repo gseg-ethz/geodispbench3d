@@ -1,19 +1,20 @@
 ---
 gsd_state_version: 1.0
-milestone: v1.0
+milestone: v0.2
 milestone_name: milestone
-current_phase: 5
-current_phase_name: CI/CD & Release
-status: "Phase 04 shipped — PR #5 (→ develop)"
-stopped_at: Phase 4 context gathered
-last_updated: "2026-06-27T20:24:42.390Z"
-last_activity: 2026-06-27
+current_phase: 05
+current_phase_name: ci-cd-release
+status: shipped
+stopped_at: Phase 05 shipped — PR #6 (phase-05 → develop)
+last_updated: "2026-06-28T09:41:54.414Z"
+last_activity: 2026-06-28
+last_activity_desc: Phase 05 verified PASS-WITH-DEFERRALS (CI green; CICD-03/04 gated to ship)
 progress:
   total_phases: 5
-  completed_phases: 4
-  total_plans: 15
-  completed_plans: 15
-  percent: 80
+  completed_phases: 5
+  total_plans: 21
+  completed_plans: 21
+  percent: 100
 ---
 
 # Project State
@@ -23,16 +24,16 @@ progress:
 See: .planning/PROJECT.md (updated 2026-06-26)
 
 **Core value:** Nothing is published to PyPI until the codebase is demonstrably lean, correct, well-tested, and its CLI-integration story is sound.
-**Current focus:** Phase 04 — licensing-metadata-packaging
+**Current focus:** Phase 05 — ci-cd-release
 
 ## Current Position
 
-Phase: 5 — CI/CD & Release
-Plan: Not started
-Status: Phase 04 shipped — PR #5 (→ develop)
-Last activity: 2026-06-27
+Phase: 05 (ci-cd-release) — VERIFIED (PASS-WITH-DEFERRALS)
+Plan: 6 of 6 complete
+Status: Phase 05 SHIPPED — PR #6 (phase-05 → develop), CI green, ready to merge into develop
+Last activity: 2026-06-28 — Phase 05 shipped via PR #6; milestone develop→main (publish) is the next deliberate step
 
-Progress: [░░░░░░░░░░] 0%
+Progress: [██████████] 100%
 
 ## Performance Metrics
 
@@ -72,6 +73,12 @@ Progress: [░░░░░░░░░░] 0%
 | Phase 03 P04 | 12min | 2 tasks | 10 files |
 | Phase 04 P01 | 4min | 3 tasks | 3 files |
 | Phase 04 P02 | 18min | 3 tasks | 9 files |
+| Phase 05 P01 | 12min | 3 tasks | 13 files |
+| Phase 05 P02 | 6min | 3 tasks | 12 files |
+| Phase 05 P03 | 7min | 3 tasks | 5 files |
+| Phase 05 P04 | 6min | 2 tasks | 4 files |
+| Phase 05 P05 | 14min | 4 tasks | 4 files |
+| Phase 05 P06 | 54min | 3 tasks | 5 files |
 
 ## Accumulated Context
 
@@ -104,6 +111,11 @@ Recent decisions affecting current work:
 - [Phase ?]: Plan 04 scrub rule: docs/ migration note may NAME the removed --rescore flag in prose but reproduces no full old command-form; src/ forbids ANY --rescore token (repo-wide negative grep gate).
 - [Phase 04]: Documentation/Changelog URLs use forward-valid blob/main targets; CHANGELOG.md is created by release-please in Phase 5 (04-01)
 - [Phase 04]: [iof3d]-unavailable README note carries no timeline; adapter framed as shipping-in-wheel-but-dormant until iof3D is public (04-01)
+- [Phase ?]: Durable v0.2.0 seed: manifest 0.1.0 + committed Release-As: 0.2.0 footer (ce1dcfc), both real git state (review HIGH 05-03)
+- [Phase 05]: Production-publish preflight (check_release_preflight.py) gates real-PyPI uploads on tag/version/draft/ancestry (T-05-13)
+- [Phase ?]: [Phase 05-04]: Branch-protection rulesets (protect-main/protect-develop) delivered as committed JSON + idempotent apply-rulesets.sh (match-by-name PUT/POST, --dry-run, write-guarding preflight); enabled at milestone-ship only, never during the phase (self-lockout). allowed_merge_methods [squash,rebase] (merge dropped); strict:false kept as a deliberate solo-maintainer tradeoff.
+- [Phase ?]: [Phase 05-04]: Ruleset contexts are a char-for-char contract; current ci.yml renders Test (core)/Test (f2s3) without ', 3.12' — Plan 05 must reconcile ci.yml matrix names (or update contexts in lockstep) and machine-verify via check_ci_ruleset_contexts.py before rulesets are enabled.
+- [Phase ?]: [Phase 05-06]: CI proven green on PR #6 to develop (run 28317897531, all 5 jobs); lean env surfaced 4 latent defects fixed in-phase (pyarrow core dep, Ax 1.3.x complete_trial objective-only, pchandler importorskip, build disk reclaim). CICD-01/02 Complete; CICD-03/04 wiring+0.2.0-seed proven, end-to-end deferred to ship. Repo stays private.
 
 ### Open Questions (surface at phase discussions)
 
@@ -135,6 +147,6 @@ yet.
 
 ## Session Continuity
 
-Last session: 2026-06-27T19:41:25.130Z
-Stopped at: Phase 4 context gathered
-Resume file: .planning/phases/04-licensing-metadata-packaging/04-CONTEXT.md
+Last session: 2026-06-28T09:41:08.191Z
+Stopped at: Completed 05-02-PLAN.md
+Resume file: None

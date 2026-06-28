@@ -44,7 +44,7 @@ comes before the cleanup, and the cleanup comes before the release.
 - [ ] Code-health audit producing a written findings report (bloat, dead code, the flagged anti-patterns, CLI risk areas)
 - [ ] Resolve audit findings — de-bloat and fixes scoped *from* the report, not pre-committed
 - [ ] Harden the three CLI-based workflow surfaces: package CLI (`cli.py`), `CliToolAdapter`, and the F2S3 `conda-run` subprocess integration; showcase F2S3 as the canonical `CliToolAdapter` example
-- [ ] CI/CD: lint + type + test gates, build (wheel + sdist), and trusted-publishing release automation to public PyPI
+- [ ] CI/CD: lint + type + test gates, build (wheel + sdist), and trusted-publishing release automation to public PyPI (first public release: v0.2.0)
 - [ ] Wire internal plan reviews through the codex CLI
 
 ### Out of Scope
@@ -63,12 +63,12 @@ comes before the cleanup, and the cleanup comes before the release.
 - **F2S3 is already a `CliToolAdapter` integration**: the `geodispbench3d_f2s3` sublib is only an output parser + tool YAML; execution goes through the generic CLI adapter via `conda run -n f2s3-dev312 f2s3`. The `f2s3` extra is empty, yet the parser imports `pchandler` — so F2S3 currently only works because the `iof3d` extra happens to pull `pchandler` in. Commenting out `iof3d` exposes this latent gap.
 - `pchandler` (newly published on PyPI, with recent changes) is used in two places: the F2S3 parser and the iof3d adapter; its usage must be verified non-breaking.
 - Dev environment is conda-isolated: env `iof3d_cosicorr3d-dev312` is mandated by `AGENTS.md` (bare `python`/`pip`/`pytest` are forbidden); F2S3 runs in a separate env `f2s3-dev312` via `conda run`.
-- CI currently targets Python 3.12; package supports 3.11/3.12; numpy is pinned to the 2.0 major.
+- CI and the package are Python 3.12-only (Phase 5, D-03 SUPERSEDED: `pchandler 2.1` — the `f2s3` extra — requires `>=3.12,<3.13`, so 3.11 is dropped); numpy is pinned to the 2.0 major.
 - Tooling available: `gh` CLI present (for clean PRs to `main`); `codex` CLI installed (v0.142.2) for internal plan reviews.
 
 ## Constraints
 
-- **Tech stack**: Python ~=3.11/3.12, numpy 2.0 pin, Ax / Hydra / OmegaConf — preserve; transitive tool stacks must stay NumPy-2 compatible.
+- **Tech stack**: Python ~=3.12 (3.12-only as of Phase 5), numpy 2.0 pin, Ax / Hydra / OmegaConf — preserve; transitive tool stacks must stay NumPy-2 compatible.
 - **Dev environment**: all python/pip/pytest invocations must go through the mandated conda env per `AGENTS.md`.
 - **Process — branching**: GSD work stays on `develop` and phase branches; PRs to `main` happen only at milestone completion and must strip the `.planning/` folder.
 - **Process — review**: internal phase-plan reviews are run through the codex CLI.

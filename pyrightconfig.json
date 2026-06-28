@@ -6,10 +6,12 @@
     "build",
     "dist",
     ".venv",
-    "src/geodispbench3d/_version.py"
+    "src/geodispbench3d/_version.py",
+    "src/geodispbench3d_iof3d",
+    "tests/iof3d"
   ],
   "venvPath": ".",
-  "pythonVersion": "3.11",
+  "pythonVersion": "3.12",
   "typeCheckingMode": "basic",
   "reportMissingImports": "warning",
   "reportMissingTypeStubs": "none",

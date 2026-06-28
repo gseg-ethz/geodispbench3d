@@ -5,7 +5,7 @@ build-backend = "setuptools.build_meta"
 [project]
 name = "geodispbench3d"
 description = "Benchmark framework for 3D displacement / optical-flow tools, with Bayesian hyperparameter sweeps and pluggable adapters."
-requires-python = "~=3.11"
+requires-python = "~=3.12"
 keywords = ["benchmark", "point-cloud", "optical-flow", "displacement", "ax", "hydra"]
 license = { text = "BSD-3-Clause" }
 authors = [
@@ -14,7 +14,6 @@ authors = [
 dynamic = ["version", "readme"]
 classifiers = [
     "Programming Language :: Python :: 3",
-    "Programming Language :: Python :: 3.11",
     "Programming Language :: Python :: 3.12",
     "License :: OSI Approved :: BSD License",
     "Operating System :: OS Independent",
@@ -25,16 +24,25 @@ classifiers = [
 dependencies = [
     "numpy ~= 2.0",
     "pandas",
+    # pandas' parquet store (results/store.py) needs an explicit engine; it is
+    # NOT a transitive guarantee of pandas itself. pyarrow >= 16 is the first
+    # series with NumPy-2 wheels, so it stays compatible with the numpy ~= 2.0
+    # pin (the lean `core` CI env surfaced the missing engine: review 05-06).
+    "pyarrow >= 16",
     "omegaconf ~= 2.3",
     "hydra-core ~= 1.3",
-    "ax-platform ~= 1.1",
+    # Ax 1.3.x tightened complete_trial: raw_data may only carry metrics the
+    # experiment registered (metric_name_to_signature), so the runner passes the
+    # objective metric alone. >= 1.3 makes that the contract we build against
+    # (the prior ~= 1.1 already resolved to 1.3.x in CI; review 05-06).
+    "ax-platform >= 1.3, < 2.0",
 ]
 
 [project.urls]
 homepage = "https://gseg.igp.ethz.ch/"
 repository = "https://github.com/gseg-ethz/geodispbench3d"
 issues = "https://github.com/gseg-ethz/geodispbench3d/issues"
-Documentation = "https://github.com/gseg-ethz/geodispbench3d/blob/main/docs/index.md"
+Documentation = "https://github.com/gseg-ethz/geodispbench3d/blob/main/docs/source/index.md"
 Changelog = "https://github.com/gseg-ethz/geodispbench3d/blob/main/CHANGELOG.md"
 
 [project.scripts]
@@ -83,7 +91,7 @@ dev = [
     "pytest ~= 8.4",
     "coverage ~= 7.0",
 ]
-docs = ["sphinx ~= 5.1"]
+docs = ["sphinx ~= 8.1", "myst-parser ~= 4.0", "sphinx-rtd-theme ~= 3.0"]
 
 [tool.setuptools]
 package-dir = { "" = "src" }
@@ -112,7 +120,7 @@ readme = { file = ["README.md"], content-type = "text/markdown" }
 
 [tool.ruff]
 line-length = 100
-target-version = "py311"
+target-version = "py312"
 extend-exclude = ["src/geodispbench3d/_version.py"]
 
 [tool.ruff.lint]
