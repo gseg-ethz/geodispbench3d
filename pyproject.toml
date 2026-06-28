@@ -5,7 +5,7 @@ build-backend = "setuptools.build_meta"
 [project]
 name = "geodispbench3d"
 description = "Benchmark framework for 3D displacement / optical-flow tools, with Bayesian hyperparameter sweeps and pluggable adapters."
-requires-python = "~=3.11"
+requires-python = "~=3.12"
 keywords = ["benchmark", "point-cloud", "optical-flow", "displacement", "ax", "hydra"]
 license = { text = "BSD-3-Clause" }
 authors = [
@@ -14,7 +14,6 @@ authors = [
 dynamic = ["version", "readme"]
 classifiers = [
     "Programming Language :: Python :: 3",
-    "Programming Language :: Python :: 3.11",
     "Programming Language :: Python :: 3.12",
     "License :: OSI Approved :: BSD License",
     "Operating System :: OS Independent",
@@ -83,7 +82,7 @@ dev = [
     "pytest ~= 8.4",
     "coverage ~= 7.0",
 ]
-docs = ["sphinx ~= 5.1"]
+docs = ["sphinx ~= 8.1", "myst-parser ~= 4.0", "sphinx-rtd-theme ~= 3.0"]
 
 [tool.setuptools]
 package-dir = { "" = "src" }
@@ -112,7 +111,7 @@ readme = { file = ["README.md"], content-type = "text/markdown" }
 
 [tool.ruff]
 line-length = 100
-target-version = "py311"
+target-version = "py312"
 extend-exclude = ["src/geodispbench3d/_version.py"]
 
 [tool.ruff.lint]
