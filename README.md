@@ -28,7 +28,9 @@ pip install 'geodispbench3d[iof3d]'
 
 > **Note:** the `[iof3d]` extra is currently unavailable on public PyPI until
 > iof3D is published publicly. The iof3D adapter ships in the wheel but stays
-> dormant until then.
+> dormant until then. iof3D is still under active development — if you would
+> like to use it for research in the meantime, contact Nicholas Meyer at
+> <meyernic@ethz.ch> directly.
 
 With the F2S3 adapter:
 
