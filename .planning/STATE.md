@@ -5,9 +5,9 @@ milestone_name: milestone
 current_phase: 2
 status: Awaiting next milestone
 stopped_at: Completed 05-02-PLAN.md
-last_updated: "2026-06-28T12:13:49.520Z"
-last_activity: 2026-06-28
-last_activity_desc: Milestone v0.2 completed and archived
+last_updated: "2026-07-06T18:30:00.000Z"
+last_activity: 2026-07-06
+last_activity_desc: "Quick task 260706-io3: iof3D research-access README note (main + develop synced)"
 progress:
   total_phases: 5
   completed_phases: 5
@@ -31,7 +31,7 @@ See: .planning/PROJECT.md (updated 2026-06-26)
 Phase: Milestone v0.2 complete
 Plan: —
 Status: Awaiting next milestone
-Last activity: 2026-06-28 — Milestone v0.2 completed and archived
+Last activity: 2026-07-06 — Quick task 260706-io3: iof3D research-access README note (main + develop synced)
 
 ## Performance Metrics
 
@@ -136,6 +136,7 @@ yet.
 | # | Description | Date | Commit | Directory |
 |---|-------------|------|--------|-----------|
 | 260626-jix | Create OVERVIEW.md one-pager for ETH open-source docs | 2026-06-26 | 99d254c | [260626-jix-create-overview-md-one-pager-for-eth-ope](./quick/260626-jix-create-overview-md-one-pager-for-eth-ope/) |
+| 260706-io3 | Add iof3D research-access contact note to README (main PR #10) + sync develop (PR #12); release-please PR #13 left unmerged | 2026-07-06 | ec0b99d | [260706-io3-iof3d-research-contact-note](./quick/260706-io3-iof3d-research-contact-note/) |
 
 ## Deferred Items
 
