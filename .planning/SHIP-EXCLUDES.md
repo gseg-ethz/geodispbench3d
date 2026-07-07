@@ -9,6 +9,7 @@ so this list is the source of truth — check it during `gsd-ship`.
 |------|--------|-------|
 | `.planning/` | GSD planning tree; internal, never public | v0.2 ship (2026-06-28) |
 | `AGENTS.md` | Internal dev-env guidance (mandated conda env + hardcoded local absolute path); kept on `develop` for development only | 2026-07-07 (quick 260707-rmd) |
+| `.claude/` | GSD-generated project instructions (`.claude/CLAUDE.md`) for the dev workflow; kept on `develop` for development only | 2026-07-07 (quick 260707-clc) |
 
 Notes:
 - `OVERVIEW.md` is **not** listed here: it was removed from `develop` as well

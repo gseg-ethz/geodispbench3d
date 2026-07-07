@@ -5,9 +5,9 @@ milestone_name: milestone
 current_phase: 2
 status: Awaiting next milestone
 stopped_at: Completed 05-02-PLAN.md
-last_updated: "2026-07-07T12:00:00.000Z"
+last_updated: "2026-07-07T14:00:00.000Z"
 last_activity: 2026-07-07
-last_activity_desc: "Quick task 260707-rmd: removed AGENTS.md + OVERVIEW.md from public main (AGENTS.md kept on develop with ship-exclude)"
+last_activity_desc: "Quick task 260707-clc: removed .claude/ from public main (kept on develop with ship-exclude)"
 progress:
   total_phases: 5
   completed_phases: 5
@@ -31,7 +31,7 @@ See: .planning/PROJECT.md (updated 2026-06-26)
 Phase: Milestone v0.2 complete
 Plan: —
 Status: Awaiting next milestone
-Last activity: 2026-07-07 — Quick task 260707-rmd: removed AGENTS.md + OVERVIEW.md from public main (AGENTS.md kept on develop with ship-exclude)
+Last activity: 2026-07-07 — Quick task 260707-clc: removed .claude/ from public main (kept on develop with ship-exclude)
 
 ## Performance Metrics
 
@@ -137,7 +137,8 @@ yet.
 |---|-------------|------|--------|-----------|
 | 260626-jix | Create OVERVIEW.md one-pager for ETH open-source docs | 2026-06-26 | 99d254c | [260626-jix-create-overview-md-one-pager-for-eth-ope](./quick/260626-jix-create-overview-md-one-pager-for-eth-ope/) |
 | 260706-io3 | Add iof3D research-access contact note to README (main PR #10) + sync develop (PR #12); release-please PR #13 left unmerged | 2026-07-06 | ec0b99d | [260706-io3-iof3d-research-contact-note](./quick/260706-io3-iof3d-research-contact-note/) |
-| 260707-rmd | Remove AGENTS.md + OVERVIEW.md from public main (PR #15); keep AGENTS.md on develop with a ship-exclude; remove OVERVIEW.md from develop too | 2026-07-07 | (this PR) | [260707-rmd-remove-agents-overview-from-main](./quick/260707-rmd-remove-agents-overview-from-main/) |
+| 260707-rmd | Remove AGENTS.md + OVERVIEW.md from public main (PR #15); keep AGENTS.md on develop with a ship-exclude; remove OVERVIEW.md from develop too | 2026-07-07 | 433b810 | [260707-rmd-remove-agents-overview-from-main](./quick/260707-rmd-remove-agents-overview-from-main/) |
+| 260707-clc | Remove .claude/ from public main (PR #17); keep on develop with a ship-exclude | 2026-07-07 | (this PR) | [260707-clc-exclude-claude-md-from-main](./quick/260707-clc-exclude-claude-md-from-main/) |
 
 ## Deferred Items
 
