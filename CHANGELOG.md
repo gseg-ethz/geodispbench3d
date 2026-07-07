@@ -1,5 +1,18 @@
 # Changelog
 
+## [0.2.1](https://github.com/gseg-ethz/geodispbench3d/compare/v0.2.0...v0.2.1) (2026-07-07)
+
+
+### 📚 Documentation
+
+* note iof3D research-access contact in README ([#10](https://github.com/gseg-ethz/geodispbench3d/issues/10)) ([7017f5b](https://github.com/gseg-ethz/geodispbench3d/commit/7017f5bf8b379af1e023f9cb625baa10f146cdbf))
+
+
+### 🧹 Miscellaneous Chores
+
+* remove .claude/ from public main ([#17](https://github.com/gseg-ethz/geodispbench3d/issues/17)) ([48b4bbf](https://github.com/gseg-ethz/geodispbench3d/commit/48b4bbfe8b939541f670bd22279e62a8c0c46c42))
+* remove AGENTS.md and OVERVIEW.md from public main ([#15](https://github.com/gseg-ethz/geodispbench3d/issues/15)) ([684b4c1](https://github.com/gseg-ethz/geodispbench3d/commit/684b4c1164e5c3d53af1ea1fd9448d1ad1d8fe93))
+
 ## [0.2.0](https://github.com/gseg-ethz/geodispbench3d/compare/v0.1.0...v0.2.0) (2026-06-28)
 
 
